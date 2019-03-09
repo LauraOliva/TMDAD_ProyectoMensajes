@@ -52,42 +52,6 @@ Características del sistema:
 	- Soporta correctamente a varios usuarios simultáneos
 	- Se despliega y ejecuta en al menos tres máquinas virtuales de las cuales al 
 	  menos una debe estar en un proveedor cloud
-	
---------------------------------------------------------------------------------
-TECNOLOGÍAS
---------------------------------------------------------------------------------
-Se van a utilizar las tecnologías recomendadas en clase:
-	- Lenguaje: Java 8
-	- Herramienta de construcción: Gradle
-	- Framework: Spring Boot
-
-Además se va a utilizar:
-	- BBDD: MySQL
-
---------------------------------------------------------------------------------
-ESTRUCTURA DEL SISTEMA
---------------------------------------------------------------------------------
-Este sistema constará de 3 máquinas virtuales:
-	- Máquina 1: Aplicación cliente (Java)
-	- Máquina 2: Aplicación servidor (Java, Spring Boot)
-	- Máquina 3: Base de datos (MySQL)
-	
-Las máquinas se comunicarán de la siguiente forma:
-	Máquina 1 ---- Máquina 2 ---- Máquina 3
-	
-APLICACIÓN CLIENTE:
-Esta aplicación será la que implemente la aplicación chat y hará llamadas al 
-servidor para obtener los datos que necesite o para mandar los datos que necesite.
-
-APLICACIÓN SERVIDOR:
-Esta aplicación comunicará el cliente con la base de datos. Recibirá peticiones
-(GET, POST, UPDATE, DELETE...) del cliente, hará las queries necesarias en la 
-BBDD y enviará la respuesta al cliente. Esta aplicación se encontrara en el cloud.
-	
-BBDD:
-Base de Datos MySQL en la que se almacenará información relativa a los usuarios 
-y a los mensajes y sus relaciones (el usuario A de tipo U1 a enviado el mensaje 
-X de tipo F al usuario B de tipo U2). 
 
 --------------------------------------------------------------------------------
 TIPO DE DATOS
@@ -108,3 +72,72 @@ TIPOS DE USUARIO:
 	- Usuario
 	- Superusuario: actúa como un usuario normal y además puede enviar un mensaje
 	  a todos los usuarios
+	  
+--------------------------------------------------------------------------------
+TECNOLOGÍAS
+--------------------------------------------------------------------------------
+Se van a utilizar las tecnologías recomendadas en clase:
+	- Lenguaje: Java 8
+	- Herramienta de construcción: Gradle
+	- Framework: Spring Boot
+
+Además se va a utilizar:
+	- BBDD: MySQL
+
+--------------------------------------------------------------------------------
+ESTRUCTURA DEL SISTEMA
+--------------------------------------------------------------------------------
+Este sistema constará de 3 máquinas virtuales:
+	- Máquina 1: Aplicación cliente (Java)
+	- Máquina 2: Aplicación servidor (Java, Spring Boot)
+	- Máquina 3: Base de datos (MySQL)
+	
+Las máquinas se comunicarán de la siguiente forma:	
+	Máquina 1 <--HTTP--> Máquina 2 <--QUERY--> Máquina 3
+	
+APLICACIÓN CLIENTE:
+Esta aplicación será la que implemente la aplicación chat y enviará peticiones
+HTTP al servidor para obtener los datos que necesite o para enviar mensajes.
+
+Tipos de peticiones que el cliente puede hacer al servidor:
+	- GET: obtener datos
+		* Datos de un usuario
+		* Datos sobre una sala
+		* Usuarios de una sala
+		* Mensajes intercambiados con un usuario
+		* Mensajes intercambiados con una sala
+	
+	- POST: actualizar informacion o insertar nuevos mensajes
+		* Enviar un mensaje a un usuario
+		* Enviar un mensaje a una sala
+		* Añadir un usuario a una sala (solo el adminitrador de la sala)
+		* Enviar un mensaje a todos los usuarios (Solo el superusuario)
+	
+	- DELETE:
+		* Eliminar una sala (solo el adminitrador de la sala)
+		* Eliminar un usuario de una sala (solo el adminitrador de la sala)
+
+APLICACIÓN SERVIDOR:
+Esta aplicación comunicará el cliente con la base de datos. Recibirá peticiones
+(GET, POST, UPDATE, DELETE...) del cliente, hará las queries necesarias en la 
+BBDD y enviará la respuesta al cliente. Esta aplicación se encontrara en el cloud.
+
+Tipos de queries que el servidor puede hacer a la BBDD:
+	- INSERT:
+		* Nuevo usuario
+		* Nueva sala
+	
+	- UPDATE:
+		* Acualizar conversaciones en una sala o conversación entre 2 usuario
+	
+	- SELECT:
+		* Obtener los mensajes
+	
+	- DELETE:
+		* Eliminar usuario de una sala
+		* Eliminar salas
+	
+BBDD:
+Base de Datos MySQL en la que se almacenará información relativa a los usuarios 
+y a los mensajes y sus relaciones (el usuario A de tipo U1 a enviado el mensaje 
+X de tipo F al usuario B de tipo U2). 
