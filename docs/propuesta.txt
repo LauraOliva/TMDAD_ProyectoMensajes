@@ -141,3 +141,31 @@ BBDD:
 Base de Datos MySQL en la que se almacenará información relativa a los usuarios 
 y a los mensajes y sus relaciones (el usuario A de tipo U1 a enviado el mensaje 
 X de tipo F al usuario B de tipo U2). 
+
+--------------------------------------------------------------------------------
+ESTRUCTURA BBDD
+--------------------------------------------------------------------------------
+Tablas:
+	- Usuario
+	- Mensaje
+	- Sala
+
+Tabla USUARIO:
+	- Id_usuario
+	- Username {unico}
+	- Tipo {usuario, superusuario}
+
+Tabla MENSAJE:
+	- Id_msg
+	- Tipo {texto, fichero}
+	- Usuario_dst {identificador de usuario}
+	- Usuario_re {identificador de usuario}
+	- Contenido {texto}
+
+Tabla SALA:
+	- Id_sala
+	- URL {texto}
+	- Administrador (Usuario)
+	- Usuarios {Lista de identificadores de usuario}
+	- Numero de usuarios {entero}
+	
