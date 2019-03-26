@@ -87,6 +87,8 @@ Además se va a utilizar:
 --------------------------------------------------------------------------------
 ESTRUCTURA DEL SISTEMA
 --------------------------------------------------------------------------------
+N-tier de 3 niveles
+
 Este sistema constará de 3 máquinas virtuales:
 	- Máquina 1: Aplicación cliente (Java)
 	- Máquina 2: Aplicación servidor (Java, Spring Boot)
