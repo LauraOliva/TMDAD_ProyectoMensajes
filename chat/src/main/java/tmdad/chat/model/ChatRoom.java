@@ -1,52 +1,69 @@
 package tmdad.chat.model;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-import javax.websocket.Session;
-
+import org.json.JSONArray;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import lombok.Getter;
 import lombok.Setter;
+import net.minidev.json.JSONObject;
 
 public class ChatRoom {
 
 	@Setter @Getter private String id;
 	
-	@Setter @Getter private ArrayList<User> users = new ArrayList<>();
+	@Setter @Getter static Map<WebSocketSession, String> userUsernameMap = new ConcurrentHashMap<>();
 	
-	@Setter @Getter private User admin;
+	@Setter @Getter private String admin;
 	
-	public ChatRoom(String id, User admin){
+	@Setter @Getter private int nUser;
+	
+	public ChatRoom(String id, String admin, WebSocketSession session){
 		this.id = id;
 		this.admin = admin;
-		users.add(admin);
+		this.nUser = 0;
+		userUsernameMap.put(session, admin);
 	}
 	
 	// Enviar el mensaje text a la sala con el identificador id
-	public void sendMessageRoom(TextMessage msg){
-		for(User u : users){
-			WebSocketSession session = u.getSession();
-			try {
-				session.sendMessage(msg);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+	public void sendMessageRoom(TextMessage msg, String sender){
+		String timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
+		JSONObject json = new JSONObject();
+		json.put("event", "login");
+		json.put("data", sender + ": " + msg.getPayload() + " (" + timestamp + ")"); 
+		String txt = String.valueOf(json);				
+		TextMessage m = new TextMessage(txt);
+		
+		userUsernameMap.keySet().stream().filter(WebSocketSession::isOpen).forEach(session -> {
+	        try {
+	            session.sendMessage(m);
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	        }
+	    });
 	}
 	
 	// TODO hacer que estos métodos solo los pueda ejecutar el admin
 	
 	// TODO inviteUser
 	
-	public void addUser(User u){
-		users.add(u);
+	public void getUserSession(String username){
+		
 	}
 	
-	public void removeUser(User u){
-		users.remove(u);
+	public void addUser(WebSocketSession session, String username){
+		userUsernameMap.put(session, username);
+		this.nUser++;
+	}
+	
+	public void removeUser(WebSocketSession session){
+		userUsernameMap.remove(session);
+		this.nUser--;
 	}
 	
 }

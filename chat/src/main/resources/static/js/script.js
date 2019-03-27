@@ -11,7 +11,7 @@ socket.onopen = function (event) {
 };
  
 socket.onmessage = function (event) {
-	addMessageToWindow(`Got Message: ${event.data}`);
+	addMessageToWindow(`${event.data}`);
 };
  
 sendButton.onclick = function (event) {
@@ -21,7 +21,6 @@ sendButton.onclick = function (event) {
 
 function sendMessage(message) {
     socket.send(message);
-    addMessageToWindow("Sent Message: " + message);
 }
  
 function addMessageToWindow(message) {
