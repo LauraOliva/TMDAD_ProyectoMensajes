@@ -5,113 +5,28 @@ box-sizing: border-box;
 }
 html, body {
 	height: 100%;
-	overflow: hidden;
 }
-body {
-	margin: 0;
-	padding: 0;
-	font-weight: 400;
-	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-	font-size: 1rem;
-	line-height: 1.58;
-	color: #333;
-	background-color: #f4f4f4;
-	height: 100%;
-}
-.clearfix:after {
-	display: block;
-	content: "";
-	clear: both;
-}
-.hidden {
-	display: none;
-}
-input {
-	padding-left: 10px;
-	outline: none;
-}
-h1, h2, h3, h4, h5, h6 {
-	margin-top: 20px;
-	margin-bottom: 20px;
-}
-h1 {
-	font-size: 1.7em;
-}
-a {
-	color: #128ff2;
+#messages, #commands {
+	text-align: left;
+	margin: 10px;
+	width: 90%;
+	padding: 1em;
+	border: 1px solid black;
 }
 
-#messages {
-        text-align: left;
-        width: 50%;
+.input-fields{
 	padding: 1em;
-        border: 1px solid black;
 }
-button {
-	box-shadow: none;
-	border: 1px solid transparent;
-	font-size: 14px;
-	outline: none;
-	line-height: 100%;
-	white-space: nowrap;
-	vertical-align: middle;
-	padding: 0.6rem 1rem;
-	border-radius: 2px;
-	transition: all 0.2s ease-in-out;
-	cursor: pointer;
-	min-height: 38px;
-}
-button.default {
-	background-color: #e8e8e8;
-	color: #333;
-	box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
-}
-button.primary {
-	background-color: #128ff2;
-	box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
-	color: #fff;
-}
-button.accent {
-	background-color: #ff4743;
-	box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
-	color: #fff;
-}
-#welcome-page {
-	text-align: center;
-}
-.welcome-page-container {
-	background-color: grey;
-	width: 100%;
-	max-width: 500px;
-	display: inline-block;
-	margin-top: 42px;
-	vertical-align: middle;
-	position: relative;
-	padding: 35px 55px 35px;
-	min-height: 250px;
-	position: absolute;
-	top: 50%;
-	left: 0;
-	right: 0;
-	margin: 0 auto;
-	margin-top: -160px;
-}
-#dialogue-page {
-	position: relative;
-	height: 100%;
-}
+
+
 .dialogue-container {
-	background-color: green;
-	margin: 10px 0;
-	max-width: 700px;
-	margin-left: auto;
-	margin-right: auto;
-	box-shadow: 0 1px 11px rgba(0, 0, 0, 0.27);
+	padding: 10;
+	margin: 20;
+	border: 1px solid black;
 	margin-top: 30px;
-	height: calc(100% - 60px);
 	max-height: 600px;
-	position: relative;
 }
+
 #dialogue-page ul {
 	list-style-type: none;
 	background-color: #FFF;
@@ -121,7 +36,10 @@ button.accent {
 	padding: 0 20px 0px 20px;
 	height: calc(100% - 150px);
 }
-#dialogue-page #dialogueForm {
+#dialogue-page #dialogueCommands {
+	padding: 20px;
+}
+#dialogue-page #dialogueMessages {
 	padding: 20px;
 }
 #dialogue-page ul li {
@@ -170,19 +88,7 @@ position: relative;
 #dialogue-page .message-data p {
 	color: #43464b;
 }
-#dialogueForm .input-group input {
-	border: 0;
-	padding: 10px;
-	background: whitesmoke;
-	float: left;
-	width: calc(100% - 85px);
-}
-#dialogueForm .input-group button {
-	float: left;
-	width: 80px;
-	height: 38px;
-	margin-left: 5px;
-}
+
 .dialogue-header {
 	text-align: center;
 	padding: 15px;
@@ -192,6 +98,60 @@ position: relative;
 	margin: 0;
 	font-weight: 500;
 }
+
+body {
+	margin: 0;
+	padding: 0;
+	font-weight: 400;
+	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+	font-size: 1rem;
+	line-height: 1.58;
+	color: #333;
+	background-color: #f4f4f4;
+	height: 100%;
+}
+
+.hidden {
+	display: none;
+}
+input {
+	padding-left: 10px;
+	outline: none;
+	width: 50%;
+	height: 30;
+	margin: 10;
+}
+
+button {
+	box-shadow: none;
+	border: 1px solid transparent;
+	font-size: 14px;
+	outline: none;
+	line-height: 100%;
+	white-space: nowrap;
+	vertical-align: middle;
+	padding: 0.6rem 1rem;
+	border-radius: 2px;
+	transition: all 0.2s ease-in-out;
+	cursor: pointer;
+	min-height: 38px;
+}
+button.default {
+	background-color: #e8e8e8;
+	color: #333;
+	box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+}
+button.primary {
+	background-color: #128ff2;
+	box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+	color: #fff;
+}
+button.accent {
+	background-color: #ff4743;
+	box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.12);
+	color: #fff;
+}
+
 @media screen and (max-width: 730px) {
 	.dialogue-container {
 	margin-left: 10px;

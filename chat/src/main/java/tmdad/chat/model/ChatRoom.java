@@ -5,13 +5,13 @@ import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.json.JSONArray;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.minidev.json.JSONObject;
+
+import org.json.JSONObject;
 
 public class ChatRoom {
 
@@ -32,12 +32,13 @@ public class ChatRoom {
 	
 	// Enviar el mensaje text a la sala con el identificador id
 	public void sendMessageRoom(TextMessage msg, String sender){
-		String timestamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
-		JSONObject json = new JSONObject();
-		json.put("event", "login");
-		json.put("data", sender + ": " + msg.getPayload() + " (" + timestamp + ")"); 
-		String txt = String.valueOf(json);				
-		TextMessage m = new TextMessage(txt);
+		String timestamp = new SimpleDateFormat("HH:mm").format(new Date());			
+		
+		JSONObject message = new JSONObject();
+		message.put("type", "chat");
+		message.put("content", "<b>" + sender + ":</b> " + msg.getPayload() + " (" + timestamp + ")");
+		
+		TextMessage m = new TextMessage(message.toString());
 		
 		userUsernameMap.keySet().stream().filter(WebSocketSession::isOpen).forEach(session -> {
 	        try {

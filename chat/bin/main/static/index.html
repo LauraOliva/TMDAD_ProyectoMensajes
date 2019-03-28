@@ -1,24 +1,33 @@
 <html>
 <head>
-    <style>
-        #messages {
-            text-align: left;
-            width: 50%;
-            padding: 1em;
-            border: 1px solid black;
-        }
-    </style>
-    <title>Sample WebSocket Client</title>
+	<link rel="stylesheet" href="/css/style.css" />
+    <title>Chat</title>
 </head>
 <body>
 <div class="container">
-    <div id="messages" class="messages"></div>
-    <div class="input-fields">
-        <p>Type a message and hit send:</p>
-        <input id="message"/>
-        <button id="send">Send</button>
- 
-    </div>
+    <div class="dialogue-container">
+	    <div id="commands" class="messages"></div>
+	    <form id="dialogueForm" name="dialogueForm" nameForm="dialogueForm">
+			<div class="form-group">
+				<div class="input-group clearfix">
+					<input type="text" id="command" placeholder="Enter a command...." autocomplete="off" />
+					<button id="sendCommand" type="submit" class="glyphicon glyphicon-share-alt">Send</button>
+				</div>
+			</div>
+		</form>
+	</div>
+    
+	<div class="dialogue-container">
+	    <div id="messages" class="messages"></div>
+		<form id="dialogueForm" name="dialogueForm" nameForm="dialogueForm">
+			<div class="form-group">
+				<div class="input-group clearfix">
+					<input type="text" id="message" placeholder="Enter a message...." autocomplete="off" />
+					<button id="send" type="submit" class="glyphicon glyphicon-share-alt">Send</button>
+				</div>
+			</div>
+		</form>
+	</div>
 </div>
 </body>
 <script src="/js/script.js"></script>
