@@ -1,25 +1,32 @@
 package tmdad.chat.configuration;
 
 import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.json.JSONObject;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import lombok.Getter;
+import lombok.Setter;
 import tmdad.chat.controller.ChatRoomController;
 import tmdad.chat.model.ChatRoom;
 
 public class WebSocketHandler extends TextWebSocketHandler{
 	private int connections = 0;
-	ChatRoom room = null;
+	ChatRoom activeRoom = null;
 	ChatRoomController controller = new ChatRoomController();
+	
+	@Setter @Getter static Map<WebSocketSession, String> userUsernameMap = new ConcurrentHashMap<>();
 	
 	@Override 
 	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
 		System.out.println("Sesion creada: " + connections);
 		String username = "User" + connections;
-		String roomId = "0";
+		userUsernameMap.put(session, username);
+		/*String roomId = "0";
 		if(connections == 0){
 			// Crear sala
 			System.out.println("Sala creada: " + roomId);
@@ -30,7 +37,7 @@ public class WebSocketHandler extends TextWebSocketHandler{
 			// Añadir usuario a la sala
 			System.out.println("Nuevo usuario: " + username);
 			room.addUser(session, username);
-		}
+		}*/
 		connections++;
 		
 	}
@@ -49,8 +56,9 @@ public class WebSocketHandler extends TextWebSocketHandler{
 	
 	@Override
 	protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
-	    System.out.println("New Text Message Received");
-	    String sender = ChatRoom.getUserUsernameMap().get(session);
+	    
+	    String sender = userUsernameMap.get(session);
+	    System.out.println("New Text Message Received From " + sender);
 	    System.out.println(message.getPayload());
 	    
 	    // Leer el json para saber que tipo de mensaje es
@@ -59,7 +67,7 @@ public class WebSocketHandler extends TextWebSocketHandler{
 	    
 	    if(type.equals("chat")){
 	    	TextMessage msg = new TextMessage( payload.getString("content").trim());
-		    room.sendMessageRoom(msg, sender);	
+	    	activeRoom.sendMessageRoom(msg, sender);	
 	    }
 	    else if(type.equals("command")){
 	    	String content = payload.getString("content").trim();
@@ -78,8 +86,11 @@ public class WebSocketHandler extends TextWebSocketHandler{
 	    		}
 	    		else{
 	    			String id = command[1];
-	    			ChatRoom chat = new ChatRoom(id, sender, session);
-	    			controller.addChatRoom(chat);
+	    			activeRoom = new ChatRoom(id, sender, session);
+	    			controller.addChatRoom(activeRoom);
+	    			sendNotificationToUser("Sala creada con éxito", session);
+	    	    	TextMessage msg = new TextMessage( "ha creado la sala " + id);
+	    	    	activeRoom.sendMessageRoom(msg, sender);	
 	    		}
 	    		
 	    	}
@@ -92,18 +103,44 @@ public class WebSocketHandler extends TextWebSocketHandler{
 	    		}
 	    		else{
 	    			String id = command[1];
-	    			ChatRoom room = controller.getChatRoom(id);
-	    			room.addUser(session, sender);
+	    			activeRoom = controller.getChatRoom(id);
+	    			if(activeRoom != null){
+		    			activeRoom.addUser(session, sender);
+		    	    	TextMessage msg = new TextMessage( "se ha unido a la sala");
+		    	    	activeRoom.sendMessageRoom(msg, sender);	
+	    			}
+	    			sendNotificationToUser("No existe la sala " + id, session);
 	    		}
 	    		
 	    	}
-	    	else if(command[0].toLowerCase().equals("leaveoom")){
+	    	else if(command[0].toLowerCase().equals("leaveroom")){
 	    		System.out.println("LeaveRoom");
+	    		if(command.length != 2){
+	    			System.err.println("LEAVEROOM id_room");
+	    			// Notificar al usuario
+	    			sendNotificationToUser("Error en el número de parámetros: LEAVEROOM id_room", session);
+	    		}
+	    		else{
+	    			String id = command[1];
+	    			activeRoom = controller.getChatRoom(id);
+	    			if(activeRoom != null){
+		    			activeRoom.removeUser(session);
+		    	    	TextMessage msg = new TextMessage( "ha abandonado la sala");
+		    	    	activeRoom.sendMessageRoom(msg, sender);	
+		    	    	activeRoom = null;
+	    			}
+	    			sendNotificationToUser("No existe la sala " + id, session);
+	    		}
 	    		
 	    	}
 	    	else if(command[0].toLowerCase().equals("changeRoom")){
 	    		System.out.println("ChangeRoom");
 	    		
+	    	}
+	    	else{
+    			System.err.println("Comando desconocido");
+    			// Notificar al usuario
+    			sendNotificationToUser("Comando desconocido", session);
 	    	}
 	    	
 	    	
