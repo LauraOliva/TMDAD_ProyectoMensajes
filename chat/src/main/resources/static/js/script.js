@@ -24,6 +24,14 @@ socket.onmessage = function (event) {
 	else if(message.type === 'chat'){		
 		addMessageToWindow(message.content);
 	}
+	else if(message.type === 'kick'){
+		var msg = {
+			content : "",
+			type : 'KICK'
+		};
+		sendMessage(JSON.stringify(msg));
+		addMessageToWindow("Has sido expulsado de la sala");
+	}
 
 };
  
