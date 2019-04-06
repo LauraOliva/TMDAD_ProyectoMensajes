@@ -9,6 +9,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import lombok.Getter;
 import lombok.Setter;
+import tmdad.chat.configuration.WebSocketHandler;
 import tmdad.chat.model.ChatRoom;
 
 public class ChatRoomController {
@@ -37,9 +38,6 @@ public class ChatRoomController {
 	
 	public void addChatRoom(ChatRoom c){
 		chatRooms.put(c.getId(), c);
-		
-		
-		
 		nChatRooms++;
 	}
 	
