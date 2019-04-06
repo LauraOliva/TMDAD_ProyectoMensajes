@@ -2,6 +2,7 @@ package tmdad.chat.controller;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.json.JSONObject;
@@ -13,7 +14,7 @@ import lombok.Setter;
 import tmdad.chat.model.ChatRoom;
 
 public class UserController {
-	@Setter @Getter private Map<WebSocketSession, String> userUsernameMap = new ConcurrentHashMap<>();
+	public static Map<WebSocketSession, String> userUsernameMap = new ConcurrentHashMap<>();
 	@Setter @Getter private Map<WebSocketSession, ChatRoom> activeRoomMap = new ConcurrentHashMap<>();
 	
 	public void newUser(String username, WebSocketSession session){
@@ -22,6 +23,15 @@ public class UserController {
 	
 	public String getUsername(WebSocketSession session){
 		return userUsernameMap.get(session);
+	}
+	
+	public WebSocketSession getUser(String username){
+		for (Entry<WebSocketSession, String> entry : userUsernameMap.entrySet()) {
+	        if (entry.getValue().equals(username)) {
+	            return entry.getKey();
+	        }
+	    }
+	    return null;
 	}
 	
 	public ChatRoom getActiveChat(WebSocketSession session){

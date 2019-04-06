@@ -7,13 +7,13 @@ import org.json.JSONObject;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import tmdad.chat.model.ChatRoom;
+import tmdad.chat.bbdd.DBController;
 
 public class MessageController {
 
 	
 	public ArrayList<String> checkMessage(WebSocketSession session, TextMessage message, 
-				UserController userController, ChatRoomController chatController) throws IOException {
+				UserController userController, ChatRoomController chatController, DBController dbController) throws IOException {
 	    ArrayList<String> result = new ArrayList<>();
 	    
 		// Leer el json para saber que tipo de mensaje es
@@ -24,10 +24,10 @@ public class MessageController {
 		String sender = userController.getUsername(session);
 		
 		// Obtener sala activa del usuario
-	    ChatRoom activeRoom = userController.getActiveChat(session);
+	    String id_active_room = dbController.getActiveRoom(sender);
 	    
 	    if(type.equals("chat")){
-	    	if(activeRoom != null){
+	    	if(id_active_room != null){
 	    		result.add("ChatOK");
 	    	}
 	    	else{
@@ -37,7 +37,7 @@ public class MessageController {
 	    	// Send notification
 	    }
 	    else if(type.equals("kick")){
-	    	if(activeRoom != null){
+	    	if(id_active_room != null){
 	    		result.add("KickOK");
 	    	}
 	    	else{
@@ -61,7 +61,7 @@ public class MessageController {
 		    		if(command.length != 2)result.add("CreateNotOK");
 		    		else{
 		    			String id = command[1];
-		    			if(!chatController.existsChatRoom(id)) result.add("CreateOK");
+		    			if(!dbController.existsChat(id)) result.add("CreateOK");
 		    			else result.add("RoomExists");
 		    			result.add(id);
 		    		}
@@ -71,8 +71,7 @@ public class MessageController {
 		    		if(command.length != 2)result.add("JoinNotOK");
 		    		else{
 		    			String id = command[1];
-		    			ChatRoom room = chatController.getChatRoom(id);
-		    			if(room != null) result.add("JoinOK");
+		    			if(dbController.existsChat(id)) result.add("JoinOK");
 		    			else result.add("RoomNotExists");
 	    				result.add(id);
 		    		}
@@ -82,7 +81,9 @@ public class MessageController {
 		    		if(command.length != 2) result.add("LeaveNotOK");
 		    		else{
 		    			String id = command[1];
-		    			if(chatController.getChatRoom(id) != null)result.add("LeaveOK");
+		    			if(dbController.existsChat(id) && dbController.getActiveRoom(sender).equals(id)){
+		    				result.add("LeaveOK");
+		    			}
 		    			else result.add("RoomNotExists");
 		    			result.add(id);
 		    		}
@@ -92,10 +93,8 @@ public class MessageController {
 		    		if(command.length != 2) result.add("DeleteNotOK");
 		    		else{
 		    			String id = command[1];
-		    			ChatRoom room = chatController.getChatRoom(id);
-		    			if(room != null){
-			    			String admin = room.getAdmin();
-			    			if(admin.equals(sender)) result.add("DeleteOK");
+		    			if(dbController.existsChat(id) && dbController.getActiveRoom(sender).equals(id)){
+			    			if(dbController.isAdmin(id, sender)) result.add("DeleteOK");
 			    			else result.add("NotAdmin");
 		    			}
 		    			else result.add("RoomNotExists");
@@ -107,12 +106,10 @@ public class MessageController {
 		    		if(command.length != 3) result.add("KickRNotOK");
 		    		else{
 		    			String id_room = command[1];
-		    			ChatRoom room = chatController.getChatRoom(id_room);
-		    			if(room != null){
-			    			String admin = room.getAdmin();
-			    			if(admin.equals(sender)){
+		    			if(dbController.existsChat(id_room) && dbController.getActiveRoom(sender).equals(id_room)){
+			    			if(dbController.isAdmin(id_room, sender)){
 			    				String id_user = command[2];
-			    				if(room.existsUser(id_user)) result.add("KickROK");
+			    				if(dbController.isUserInChat(sender, id_room)) result.add("KickROK");
 			    				else result.add("UserNotRoom");
 		    					result.add(id_user);
 			    			}
