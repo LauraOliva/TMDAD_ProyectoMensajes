@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
 public class DBController {
@@ -146,7 +147,6 @@ public class DBController {
 	
 	/* TABLA CHATROOM */
 	
-	/* TODO */
 	public void insertChat(String name, String admin, boolean multiple){
 		String query = "INSERT INTO chatroom (name, admin, multipleusers) "
 				+"VALUES ('" + name + "','" + admin + "'," + multiple + ");";
@@ -156,24 +156,6 @@ public class DBController {
 			st.executeUpdate(query);
 			st.close();
 		} catch(SQLException e){ System.err.println(e);}  
-	}
-
-	/* TODO */
-	public int getIdChat(String name){
-		String query = "SELECT idchatroom FROM chatroom WHERE name='" + name + "';";
-		Statement st;
-		ResultSet rs;
-		int id_room = 0;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-		    while (rs.next()){
-		    	id_room = rs.getInt("idchatroom");
-		    }
-		} catch(SQLException e){ System.err.println(e);}  
-    	System.out.println("Chat activo " + id_room);
-	    return id_room;
 	}
 
 	public boolean existsChat(String name){
@@ -191,7 +173,6 @@ public class DBController {
 		return true;
 	}
 	
-	/* TODO */
 	public void removeChat(String name){
 		String query = "DELETE FROM chatroom WHERE name='" + name + "';";
 		Statement st;
@@ -202,7 +183,6 @@ public class DBController {
 		} catch(SQLException e){ System.err.println(e);}  
 	}
 
-	/* TODO */
 	public boolean isAdmin(String name, String username){
 		String query = "SELECT admin FROM chatroom WHERE name='" + name + "';";
 		Statement st;
@@ -256,16 +236,59 @@ public class DBController {
 	/* TABLA MENSAJE */
 	
 	/* TODO */
-	public void insertMsg(String sender, int id_room, String timestamp, String msg, String type){
-		
+	public void insertMsg(String sender, String dst, long timestamp, String msg, String type){
+		String query = "INSERT INTO mensajes (sender, dst, timestamp, msg, type) "
+				+"VALUES ('" + sender + "','" + dst + "'," + timestamp + ",'" + msg + "','" + type + "');";
+		Statement st;
+		try {
+			st = con.createStatement();
+			st.executeUpdate(query);
+			st.close();
+		} catch(SQLException e){ System.err.println(e);}  
 	}
 
-	/* TODO */
-	public ArrayList<String> getMsgRoom(int id_room){
-		ArrayList<String> msg = new ArrayList<>();
+	public ArrayList<String> getMsg(String id, String type){
+		ArrayList<String> msgs = new ArrayList<>();
 		
-		return msg;
+		String query = "SELECT sender, timestamp, msg FROM mensajes WHERE type='"+ type 
+				+ "' AND dst='" + id + "' ORDER BY timestamp;";
+		Statement st;
+		ResultSet rs;
+		try {
+			st = con.createStatement();
+			// execute the query, and get a java resultset
+			rs = st.executeQuery(query);
+		    while (rs.next()){
+		    	String s = rs.getString("sender");
+		    	long t = rs.getLong("timestamp");
+		    	String m = rs.getString("msg");
+		    	String timestamp = new SimpleDateFormat("HH:mm").format(t);	
+		    	String msg = "<b>" + s + ":</b> " + m + " (" + timestamp + ")";
+		    	msgs.add(msg);
+		    }
+		} catch(SQLException e){ System.err.println(e);}  
+		
+		return msgs;
 	}
+	
+	
+	/* TODO */
+	public void removeMsgRoom(String id_room){
+		String query = "DELETE FROM mensajes WHERE type='chat' AND dst='" + id_room + "';";
+		Statement st;
+		try {
+			st = con.createStatement();
+		    st.executeUpdate(query);
+		    st.close();
+		} catch(SQLException e){ System.err.println(e);}  
+	}
+	
+	/* TODO */
+	public long getDateJoin(String username, String id_room){
+		//SELECT timestamp FROM chat.mensajes WHERE type='notification' AND dst='user1' AND msg = 'Te has unido a la sala 1' ORDER BY timestamp DESC LIMIT 1;
+		return (long) 1.0;
+	}
+	
 	
 	
 	

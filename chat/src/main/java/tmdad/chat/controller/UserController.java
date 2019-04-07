@@ -1,6 +1,7 @@
 package tmdad.chat.controller;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,6 +12,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import lombok.Getter;
 import lombok.Setter;
+import tmdad.chat.bbdd.DBController;
 import tmdad.chat.model.ChatRoom;
 
 public class UserController {
@@ -46,13 +48,21 @@ public class UserController {
 		activeRoomMap.put(session, room);
 	}
 	
-	public void sendNotificationToUser(String not, WebSocketSession session, String type){
+	public void sendNotificationToUser(String not, WebSocketSession session, String type, DBController dbController){
 		JSONObject notification = new JSONObject();
 		notification.put("type", type);
 		notification.put("content", "<b>System</b>: " + not);
 		TextMessage message = new TextMessage(notification.toString());
-		try {
+		try { 
+			// Enviar notificacion si esta conectado
 			session.sendMessage(message);
+			
+			/* TODO si no enviar a la cola */
+			
+			String u = userUsernameMap.get(session);
+			Date date= new Date();
+			long time = date.getTime();
+			dbController.insertMsg("System", u, time , not, type);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -1,5 +1,6 @@
 package tmdad.chat.controller;
 
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -26,31 +27,57 @@ public class ChatRoomController {
 		nChatRooms = 0;
 	}
 	
+	public void getMsgRoom(WebSocketSession session, String id_room, DBController dbController){
+		
+		/* TODO obtener solo los mensajes del periodo en el que ha estado en esa sala */
+		
+		
+		// getLastDateJoin()
+		
+		ArrayList<String> msg = dbController.getMsg(id_room, "chat");
+		if(session.isOpen()){
+			JSONObject message = new JSONObject();
+			message.put("type", "chat");
+			TextMessage m;
+			for(int i = 0; i < msg.size(); i++){
+				message.put("content", msg.get(i));
+				try {
+					System.out.println("send " + msg.get(i));
+					m = new TextMessage(message.toString());
+					session.sendMessage(m);
+				} catch (IOException e) { e.printStackTrace(); }
+			}
+		}
+		
+	}
+	
 	public void sendMessageRoom(String id, TextMessage msg, String sender, String type, DBController dbController){
 		ArrayList<String> users = dbController.getUsersChat(id);
 		
-		String timestamp = new SimpleDateFormat("HH:mm").format(new Date());			
+		Date date= new Date();
+		String timestamp = new SimpleDateFormat("HH:mm").format(date);			
 		
 		JSONObject message = new JSONObject();
 		message.put("type", type);
 		message.put("content", "<b>" + sender + ":</b> " + msg.getPayload() + " (" + timestamp + ")");
 		
 		TextMessage m = new TextMessage(message.toString());
-		
+		long time = date.getTime();
+		dbController.insertMsg(sender, id, time, msg.getPayload(), type);
 		UserController.userUsernameMap.entrySet().stream().forEach(entry -> {
 	        try {
 	        	WebSocketSession session = entry.getKey();
 	        	if(session.isOpen()){
 		        	String u = entry.getValue();
 		            if(users.contains(u)){
-		            	session.sendMessage(m);
+		            	// Enviar mensaje si esta conectado
+		            	if(session.isOpen()) session.sendMessage(m);
+		    			
+		    			/* TODO si no enviar a la cola */
+		            	
 		            }
-		            
-		            /* TODO si no esta conectado mandarlo a RabbitMQTT */
 	        	}
-	        } catch (Exception e) {
-	            e.printStackTrace();
-	        }
+	        } catch (Exception e) { e.printStackTrace(); }
 	    });
 	}
 	
