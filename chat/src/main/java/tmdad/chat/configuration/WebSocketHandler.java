@@ -24,13 +24,22 @@ public class WebSocketHandler extends TextWebSocketHandler{
 	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
 		System.out.println("Sesion creada: " + connections);
 		String username = "user" + connections;
+		UserController.userUsernameMap.put(username, session);
+		String activeRoom = null;
 		if(dbController.existsUser(username)){
-			System.out.println("Ya existe un usuario con nombre " + username);		
+			System.out.println("Ya existe un usuario con nombre " + username);	
+			userController.getNotificationUser(session, dbController);
+			activeRoom = dbController.getActiveRoom(username);
+			if(activeRoom != null){
+				chatController.getMsgRoom(session, activeRoom, dbController);
+			}
 		}
 		else{
 			dbController.insertUser(username, "1234", true);
 		}
-		userController.newUser(username, session);
+		
+		userController.sendNotificationToUser("Username: " + username + ", ChatRom: " + activeRoom, session, "notification", dbController);
+		
 		connections++;
 		
 	}
@@ -39,7 +48,7 @@ public class WebSocketHandler extends TextWebSocketHandler{
 	protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
 	        
 		// Obtener nombre de usuario
-		String sender = UserController.userUsernameMap.get(session);
+		String sender = UserController.getUsername(session);
 	    System.out.println("New Text Message Received From " + sender);
 	    System.out.println(message.getPayload());
 	    
@@ -62,13 +71,6 @@ public class WebSocketHandler extends TextWebSocketHandler{
     	String id_room;
 		String id_user;
 		
-		/* TODO almacenar los mensajes */
-		
-		/* TODO recuperar los mensajes */
-		
-		/* TODO recuperar las notificaciones */
-		
-		/* TODO almacenar las notificaciones en la bbdd de tipo not */
 		
 		/* TODO convesacion 2 personas */
 		
@@ -109,7 +111,8 @@ public class WebSocketHandler extends TextWebSocketHandler{
     			//room = new ChatRoom(id_room, sender, session);
     			//chatController.addChatRoom(room);
     			dbController.insertChat(id_room, sender, true);
-    			userController.sendNotificationToUser("Sala creada con éxito", session, "notification", dbController);
+    			userController.sendNotificationToUser("Sala " + id_room + " creada con éxito", session, "notification", dbController);
+    			userController.sendNotificationToUser("Te has unido a la sala " + id_room, session, "notification", dbController);
     	    	msg = new TextMessage( sender + " ha creado la sala " + id_room);
     	    	chatController.sendMessageRoom(id_room, msg, sender, "chat", dbController);
     	    	//userController.addActiveChat(session, room);
@@ -171,7 +174,7 @@ public class WebSocketHandler extends TextWebSocketHandler{
 				id_user = status.get(1);
     			id_room = status.get(2);
     			//room = chatController.getChatRoom(id_room);
-    			WebSocketSession userSession = userController.getUser(id_user);
+    			WebSocketSession userSession = UserController.userUsernameMap.get(id_user);
     			userController.sendNotificationToUser("Has sido expulsado de la sala " + id_room, userSession, "kick", dbController);
 				// Eliminar al usuario
 				//room.removeUser(id_user);

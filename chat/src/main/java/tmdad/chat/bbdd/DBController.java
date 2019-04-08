@@ -247,11 +247,19 @@ public class DBController {
 		} catch(SQLException e){ System.err.println(e);}  
 	}
 
-	public ArrayList<String> getMsg(String id, String type){
+	public ArrayList<String> getMsg(String id, String type, String username){
 		ArrayList<String> msgs = new ArrayList<>();
 		
 		String query = "SELECT sender, timestamp, msg FROM mensajes WHERE type='"+ type 
-				+ "' AND dst='" + id + "' ORDER BY timestamp;";
+				+ "' AND dst='" + id + "'";
+		
+		if(type.equals("chat")){
+			long time = getDateJoin(username, id);
+			query = query + " AND timestamp >= " + time;
+		}
+		
+		query = query + " ORDER BY timestamp;";
+		System.out.println(query);
 		Statement st;
 		ResultSet rs;
 		try {
@@ -285,8 +293,21 @@ public class DBController {
 	
 	/* TODO */
 	public long getDateJoin(String username, String id_room){
-		//SELECT timestamp FROM chat.mensajes WHERE type='notification' AND dst='user1' AND msg = 'Te has unido a la sala 1' ORDER BY timestamp DESC LIMIT 1;
-		return (long) 1.0;
+		String query = "SELECT timestamp FROM chat.mensajes WHERE type='notification' AND dst='"
+				+ username + "' AND msg ='Te has unido a la sala " + id_room 
+				+ "' ORDER BY timestamp DESC LIMIT 1;";
+		Statement st;
+		ResultSet rs;
+		long time = 0;
+		try {
+			st = con.createStatement();
+			// execute the query, and get a java resultset
+			rs = st.executeQuery(query);
+		    while (rs.next()){
+		    	time = rs.getLong("timestamp");
+		    }
+		} catch(SQLException e){ System.err.println(e);}  
+	    return time;
 	}
 	
 	

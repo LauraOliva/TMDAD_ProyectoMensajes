@@ -21,7 +21,7 @@ public class MessageController {
 	    String type = payload.getString("type").trim().toLowerCase();
 	    
 	    // Obtener nombre de usuario
-		String sender = userController.getUsername(session);
+		String sender = UserController.getUsername(session);
 		
 		// Obtener sala activa del usuario
 	    String id_active_room = dbController.getActiveRoom(sender);

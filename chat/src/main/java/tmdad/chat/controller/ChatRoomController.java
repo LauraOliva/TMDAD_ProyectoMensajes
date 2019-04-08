@@ -34,7 +34,7 @@ public class ChatRoomController {
 		
 		// getLastDateJoin()
 		
-		ArrayList<String> msg = dbController.getMsg(id_room, "chat");
+		ArrayList<String> msg = dbController.getMsg(id_room, "chat", UserController.getUsername(session));
 		if(session.isOpen()){
 			JSONObject message = new JSONObject();
 			message.put("type", "chat");
@@ -66,9 +66,9 @@ public class ChatRoomController {
 		dbController.insertMsg(sender, id, time, msg.getPayload(), type);
 		UserController.userUsernameMap.entrySet().stream().forEach(entry -> {
 	        try {
-	        	WebSocketSession session = entry.getKey();
+	        	WebSocketSession session = entry.getValue();
 	        	if(session.isOpen()){
-		        	String u = entry.getValue();
+		        	String u = entry.getKey();
 		            if(users.contains(u)){
 		            	// Enviar mensaje si esta conectado
 		            	if(session.isOpen()) session.sendMessage(m);
