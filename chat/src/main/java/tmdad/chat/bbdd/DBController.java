@@ -216,9 +216,12 @@ public class DBController {
 	    return multiple;
 	}
 	
+	/* TODO que funcione por fechas */
+	/* TODO otra opcin es añadir separar el campo de activechat en 2: chat (string) y activechat (bool) */
 	public boolean isUserInChat(String username, String name){
 		String query = "SELECT * FROM usuario WHERE username='" + username 
-				+ "', AND activeroom='" + name + "';";
+				+ "' AND activeroom='" + name + "';";
+		System.out.println(query);
 		Statement st;
 		ResultSet rs;
 		try {
@@ -229,7 +232,7 @@ public class DBController {
 			st.close();
 			return result;
 		} catch(SQLException e){ System.err.println(e);}  
-		return true;
+		return false;
 	}
 	
 	/* TABLA MENSAJE */
@@ -249,11 +252,14 @@ public class DBController {
 		ArrayList<String> msgs = new ArrayList<>();
 		
 		String query = "SELECT sender, timestamp, msg FROM mensajes, chatroom WHERE type='"+ type 
-				+ "' AND dst='" + id + "' AND name=dst AND multipleusers=" + multiple;
+				+ "' AND dst='" + id + "'";
 		
-		if(type.equals("chat") && multiple){
-			long time = getDateJoin(username, id);
-			query = query + " AND timestamp >= " + time;
+		if(type.equals("chat")){
+			query = query + " AND name=dst AND multipleusers=" + multiple;
+			if(multiple){
+				long time = getDateJoin(username, id);
+				query = query + " AND timestamp >= " + time;
+			}
 		}
 		
 		query = query + " ORDER BY timestamp;";
@@ -307,7 +313,40 @@ public class DBController {
 	    return time;
 	}
 	
-	
+	public boolean hasBeenInvited(String username, String id_room){
+		String query_inv = "SELECT timestamp FROM chat.mensajes WHERE type='notification' AND dst='"
+				+ username + "' AND msg ='Has sido invitado a la sala " + id_room + " (JOINROOM " + id_room + " para aceptar)" 
+				+ "' ORDER BY timestamp DESC LIMIT 1;";
+		
+		String query_leave = "SELECT timestamp from mensajes WHERE type='notification' AND "
+				+ "(msg='Has abandonado la sala " + id_room + "' OR msg='Has sido expulsado de la sala " 
+				+ id_room + "') ORDER BY timestamp DESC LIMIT 1;";
+		
+		System.out.println(query_inv);
+		System.out.println(query_leave);
+		
+		/* TODO comprobar que la fecha de la invitacion sea posterior a la fecha en la que haya abandonado el grupo en caso en el que lo haya abandonado */
+		Statement st;
+		ResultSet rs;
+		long time_inv = 0, time_leave = 0;
+		try {
+			st = con.createStatement();
+			// execute the query, and get a java resultset
+			rs = st.executeQuery(query_inv);
+		    while (rs.next()){
+		    	time_inv = rs.getLong("timestamp");
+		    }
+		    rs = st.executeQuery(query_leave);
+		    while (rs.next()){
+		    	time_leave = rs.getLong("timestamp");
+		    }
+		} catch(SQLException e){ System.err.println(e);}  
+		if (time_inv == 0) return false;
+		else if(time_inv != 0 && time_leave == 0) return true;
+		else if(time_inv < time_leave) return false;
+		else if(time_inv >= time_leave) return true;
+		else return false;
+	}
 	
 	
 }

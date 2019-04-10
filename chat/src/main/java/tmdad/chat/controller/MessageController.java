@@ -136,11 +136,26 @@ public class MessageController {
 		    		else{
 		    			String id = command[1];
 		    			if(dbController.existsChat(id, true)){
-		        	    	dbController.setActiveRoom(sender, id);
-		    				result.add("JoinOK");
+		    				if(dbController.hasBeenInvited(sender, id)){
+		    					if(!dbController.isUserInChat(sender, id)){
+				        	    	dbController.setActiveRoom(sender, id);
+				    				result.add("JoinOK");
+				    				result.add(id);
+		    					}
+		    					else{
+		    						result.add("UserInRoom");
+		    	    				result.add(sender);
+		    					}
+		    				}
+		    				else{
+		    					result.add("NotInvited");
+			    				result.add(id);
+		    				}
 		    			}
-		    			else result.add("RoomNotExists");
-	    				result.add(id);
+		    			else{
+		    				result.add("RoomNotExists");
+		    				result.add(id);
+		    			}
 		    		}
 		    		break;
 	    		case "leaveroom":
@@ -160,13 +175,9 @@ public class MessageController {
 	    			if(command.length != 1)result.add("CloseNotOK");
 	    			else{
 	    				if(id_active_room != null){
-		    	    		result.add("CloseOK");
-		    	    		result.add(id_active_room);
 		    	    		dbController.removeActiveRoom(sender);
 		    	    	}
-		    	    	else{
-		    	    		result.add("NoActiveRoom");
-		    	    	}
+	    	    		result.add("CloseOK");
 	    			}
 	    			break;
 	    		case "openroom":
@@ -185,6 +196,29 @@ public class MessageController {
 		    			}
 	    				result.add(id);
 	    			}
+	    			break;
+	    		case "inviteroom":
+	    			System.out.println("inviteroom");
+		    		if(command.length != 3) result.add("InviteNotOK");
+		    		else{
+		    			String id_room = command[1];
+		    			if(dbController.existsChat(id_room, true)){
+			    			if(dbController.isAdmin(id_room, sender)){
+			    				String id_user = command[2];
+			    				if(!dbController.isUserInChat(id_user, id_room)){
+			    	    			
+			    					result.add("InviteOK");
+			    					result.add(id_user);
+			    					result.add(id_room);
+			    				}
+			    				else result.add("UserInRoom");
+		    					result.add(id_user);
+			    			}
+			    			else result.add("NotAdmin");
+		    			}
+		    			else result.add("RoomNotExists");
+	    				result.add(id_room);
+		    		}
 	    			break;
 	    		case "deleteroom":
 		    		System.out.println("DeleteRoom");

@@ -67,17 +67,16 @@ public class WebSocketHandler extends TextWebSocketHandler{
     			id_room = status.get(2);
     			userController.getNotificationUser(session, dbController);
     			chatController.getMsgRoom(session, id_room, dbController);
-    			userController.sendNotificationToUser("Username: " + id_user + ", ChatRom: " + id_room, session, "notification", dbController);
+    			userController.sendNotificationToUser("Username: " + id_user + ", ChatRoom: " + id_room, session, "notification", dbController);
     			break;
     		case "VerifyNotActive":
     			id_user = status.get(1);
     			userController.getNotificationUser(session, dbController);
-    			userController.sendNotificationToUser("Username: " + id_user + ", ChatRom: null", session, "notification", dbController);
+    			userController.sendNotificationToUser("Username: " + id_user + ", ChatRoom: null", session, "notification", dbController);
     			break;
     		case "KickOK":
     			id_room = status.get(1);
     			userController.sendNotificationToUser("Te han expulsado de la sala " + id_room, session, "notification", dbController);
-    			userController.sendNotificationToUser("", session, "clean", dbController);
     	    	break;
     		case "CreateNotOK":
     			System.err.println("CREATEROOM id_room");
@@ -114,7 +113,6 @@ public class WebSocketHandler extends TextWebSocketHandler{
     	    	msg = new TextMessage( "se ha unido a la sala " + id_room);
     			userController.sendNotificationToUser("Te has unido a la sala " + id_room, session, "notification", dbController);
     	    	chatController.sendMessageRoom(id_room, msg, sender, "chat", dbController);
-    	    	chatController.getMsgRoom(session, id_room, dbController);
     	    	break;
     		case "LeaveNotOK":
     			System.err.println("LEAVEROOM id_room");
@@ -125,7 +123,7 @@ public class WebSocketHandler extends TextWebSocketHandler{
     			id_room = status.get(1);
     	    	msg = new TextMessage( "ha abandonado la sala");
     	    	chatController.sendMessageRoom(id_room, msg, sender, "chat", dbController);	
-    			userController.sendNotificationToUser("", session, "clean", dbController);
+    			userController.sendNotificationToUser("Has abandonado la sala " + id_room, session, "notification", dbController);
     	    	break;
     		case "CloseOK":
     			userController.sendNotificationToUser("", session, "clean", dbController);
@@ -144,8 +142,19 @@ public class WebSocketHandler extends TextWebSocketHandler{
     		case "OpenNotOK":
     			userController.sendNotificationToUser("Error en el número de parámetros: OPENROOM id_room", session, "notification", dbController);
     			break;
+    		case "InviteOK":
+				id_user = status.get(1);
+    			id_room = status.get(2);
+    			userController.sendNotificationToUser("Has invitado al usuario " + id_user + " a unirse a la sala " + id_room, session, "notification", dbController);
+    	    	msg = new TextMessage("Se ha invitado a unirse a la sala a " + id_user);
+    			chatController.sendMessageRoom(id_room, msg, sender, "chat", dbController);
+    			userController.sendNotificationToUser("Has sido invitado a la sala " + id_room + " (JOINROOM " + id_room + " para aceptar)", userController.getSession(id_user), 
+    					"notification", dbController);
+    			break;
+    		case "InviteNotOK":
+    			userController.sendNotificationToUser("Error en el número de parámetros: INVITEROOM id_room id_user", session, "notification", dbController);
+    			break;
     		case "DeleteNotOK":
-    			System.err.println("DELETEROOM id_room");
     			// Notificar al usuario
     			userController.sendNotificationToUser("Error en el número de parámetros: DELETEROOM id_room", session, "notification", dbController);
     			break;
@@ -155,7 +164,6 @@ public class WebSocketHandler extends TextWebSocketHandler{
     	    	chatController.sendMessageRoom(id_room, msg, sender, "chat", dbController);
 				// Avisar al resto de usuarios de que su activeroom es null
     	    	chatController.sendMessageRoom(id_room, msg, sender, "kick", dbController);
-    			userController.sendNotificationToUser("", session, "clean", dbController);
     	    	break;
     		case "KickRNotOK":
     			System.err.println("KICKROOM id_room id_user");
@@ -165,11 +173,8 @@ public class WebSocketHandler extends TextWebSocketHandler{
     		case "KickROK":
 				id_user = status.get(1);
     			id_room = status.get(2);
-    			//room = chatController.getChatRoom(id_room);
     			WebSocketSession userSession = UserController.userUsernameMap.get(id_user);
-    			userController.sendNotificationToUser("Has sido expulsado de la sala " + id_room, userSession, "kick", dbController);
-				// Eliminar al usuario
-				//room.removeUser(id_user);
+    			userController.sendNotificationToUser("Has sido expulsado de la sala " + id_room, userSession, "notification", dbController);
 				// Notificar al resto de usuarios de la sala
     	    	msg = new TextMessage( "(Administrador) ha expulsado de la sala " + id_room + " a " + id_user);
     	    	chatController.sendMessageRoom(id_room, msg, sender, "chat", dbController);
@@ -197,6 +202,10 @@ public class WebSocketHandler extends TextWebSocketHandler{
     			break;
     		case "NoActiveRoom":
     			userController.sendNotificationToUser("No tienes ninguna sala activa", session, "notification", dbController);
+    			break;
+    		case "UserInRoom":
+				id_user = status.get(1);
+    			userController.sendNotificationToUser("El usuario " + id_user + " ya esta en la sala", session, "notification", dbController);
     			break;
     		default:
     			System.err.println("Comando desconocido");
