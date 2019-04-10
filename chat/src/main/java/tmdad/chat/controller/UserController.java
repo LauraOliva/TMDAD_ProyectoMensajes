@@ -53,7 +53,7 @@ public class UserController {
 	}
 	
 	public void getNotificationUser(WebSocketSession session, DBController dbController){
-		ArrayList<String> not = dbController.getMsg(getUsername(session), "notification", getUsername(session));
+		ArrayList<String> not = dbController.getMsg(getUsername(session), "notification", getUsername(session), false);
 		if(session.isOpen()){
 			JSONObject message = new JSONObject();
 			message.put("type", "notification");

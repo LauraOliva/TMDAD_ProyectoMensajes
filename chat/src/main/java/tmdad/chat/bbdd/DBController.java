@@ -158,8 +158,8 @@ public class DBController {
 		} catch(SQLException e){ System.err.println(e);}  
 	}
 
-	public boolean existsChat(String name){
-		String query = "SELECT * FROM chatroom WHERE name='" + name + "';";
+	public boolean existsChat(String name, boolean multiple){
+		String query = "SELECT * FROM chatroom WHERE name='" + name + "' AND multipleusers=" + multiple + ";";
 		Statement st;
 		ResultSet rs;
 		try {
@@ -200,7 +200,6 @@ public class DBController {
 	    return false;
 	}
 
-	/* TODO */
 	public boolean isMultiple(String name){
 		String query = "SELECT multipleusers FROM chatroom WHERE name='" + name + "';";
 		Statement st;
@@ -235,7 +234,6 @@ public class DBController {
 	
 	/* TABLA MENSAJE */
 	
-	/* TODO */
 	public void insertMsg(String sender, String dst, long timestamp, String msg, String type){
 		String query = "INSERT INTO mensajes (sender, dst, timestamp, msg, type) "
 				+"VALUES ('" + sender + "','" + dst + "'," + timestamp + ",'" + msg + "','" + type + "');";
@@ -247,13 +245,13 @@ public class DBController {
 		} catch(SQLException e){ System.err.println(e);}  
 	}
 
-	public ArrayList<String> getMsg(String id, String type, String username){
+	public ArrayList<String> getMsg(String id, String type, String username, boolean multiple){
 		ArrayList<String> msgs = new ArrayList<>();
 		
-		String query = "SELECT sender, timestamp, msg FROM mensajes WHERE type='"+ type 
-				+ "' AND dst='" + id + "'";
+		String query = "SELECT sender, timestamp, msg FROM mensajes, chatroom WHERE type='"+ type 
+				+ "' AND dst='" + id + "' AND name=dst AND multipleusers=" + multiple;
 		
-		if(type.equals("chat")){
+		if(type.equals("chat") && multiple){
 			long time = getDateJoin(username, id);
 			query = query + " AND timestamp >= " + time;
 		}
@@ -291,7 +289,6 @@ public class DBController {
 		} catch(SQLException e){ System.err.println(e);}  
 	}
 	
-	/* TODO */
 	public long getDateJoin(String username, String id_room){
 		String query = "SELECT timestamp FROM chat.mensajes WHERE type='notification' AND dst='"
 				+ username + "' AND msg ='Te has unido a la sala " + id_room 

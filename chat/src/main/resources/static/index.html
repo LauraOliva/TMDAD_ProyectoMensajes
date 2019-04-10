@@ -4,7 +4,21 @@
     <title>Chat</title>
 </head>
 <body>
-<div class="container">
+<div id="welcome-page">
+	<div class="welcome-page-container">
+		<h1 class="title">Welcome - To join the chat group enter your name</h1>
+		<form id="welcomeForm" name="welcomeForm">
+			<div class="form-group">
+				<input type="text" id="name" placeholder="name" class="form-control" />
+			</div>
+			<div class="form-group">
+				<button type="submit" onclass="accent username-submit">Let's Begin</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<div id="dialogue-page" class="hidden container">
     <div class="dialogue-container">
 	    <div id="commands" class="messages"></div>
 	    <form id="dialogueForm" name="dialogueForm" nameForm="dialogueForm">

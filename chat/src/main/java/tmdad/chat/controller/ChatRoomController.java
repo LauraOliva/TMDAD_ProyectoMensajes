@@ -29,12 +29,9 @@ public class ChatRoomController {
 	
 	public void getMsgRoom(WebSocketSession session, String id_room, DBController dbController){
 		
-		/* TODO obtener solo los mensajes del periodo en el que ha estado en esa sala */
+		boolean multiple = dbController.isMultiple(id_room);
 		
-		
-		// getLastDateJoin()
-		
-		ArrayList<String> msg = dbController.getMsg(id_room, "chat", UserController.getUsername(session));
+		ArrayList<String> msg = dbController.getMsg(id_room, "chat", UserController.getUsername(session), multiple);
 		if(session.isOpen()){
 			JSONObject message = new JSONObject();
 			message.put("type", "chat");
