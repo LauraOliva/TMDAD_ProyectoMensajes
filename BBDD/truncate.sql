@@ -1,0 +1,3 @@
+TRUNCATE TABLE usuario;
+TRUNCATE TABLE chatroom;
+TRUNCATE TABLE mensajes;
