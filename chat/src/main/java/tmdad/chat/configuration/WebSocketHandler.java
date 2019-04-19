@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -13,12 +15,13 @@ import tmdad.chat.controller.ChatRoomController;
 import tmdad.chat.controller.MessageParser;
 import tmdad.chat.controller.UserController;
 
+@Component
 public class WebSocketHandler extends TextWebSocketHandler{
 
 	MessageParser msgParser = new MessageParser();
 	UserController userController = new UserController();
 	ChatRoomController chatController = new ChatRoomController();
-	DBAdministrator dbAdministrator = new DBAdministrator();
+	@Autowired DBAdministrator dbAdministrator;
 
 	@Override
 	protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {

@@ -41,9 +41,14 @@ public class MessageParser {
 	    
 		
 		// Obtener sala activa del usuario
-	    String id_active_room = dbAdministrator.getActiveRoom(sender);
+	    System.out.println("Semder " + sender);
+	    String id_active_room = null;
+	    if(sender != null) id_active_room = dbAdministrator.getActiveRoom(sender);
 	    
+
 	    System.out.println("Tipo = " + type);
+	    System.out.println("Sala = " + id_active_room);
+	    System.out.println("Sender = " + sender);
 	    
 	    if((type.equals(typeMessage.CHAT.toString()) || type.equals(typeMessage.KICK.toString())) 
 	    	&& id_active_room == null){
@@ -58,12 +63,12 @@ public class MessageParser {
 	    }
 	    else if(type.equals(typeMessage.VERIFY.toString())){
 	    	String username = payload.getString("content").trim();
+	    	id_active_room = dbAdministrator.getActiveRoom(username);
 			UserController.userUsernameMap.put(username, session);
-			String activeRoom = dbAdministrator.getActiveRoom(username);
-			if(dbAdministrator.existsUser(username) && activeRoom != null){
+			if(dbAdministrator.existsUser(username) && id_active_room != null){
 				result.add(reply.VERIFYACTIVE.toString());
 		    	result.add(username);
-		    	result.add(activeRoom);
+		    	result.add(id_active_room);
 			}
 			else{
 				dbAdministrator.insertUser(username, "1234", true);
@@ -184,13 +189,13 @@ public class MessageParser {
 		    		break;
 	    		case LEAVEROOM:
 	    			id_room = command[1];
-        	    	dbAdministrator.removeActiveRoom(sender);
         	    	result.add(reply.LEAVEOK.toString());
 	    			result.add(id_room);
 		    		break;
 	    		case CLOSEROOM:
     				if(id_active_room != null){
-	    	    		dbAdministrator.removeActiveRoom(sender);
+	    	    		//dbAdministrator.removeActiveRoom(sender);
+    					dbAdministrator.setActiveRoom(sender, null);
 	    	    	}
     				result.add(reply.CLOSEOK.toString());
 	    			break;
@@ -220,7 +225,8 @@ public class MessageParser {
 	    		case DELETEROOM:
 		    		System.out.println("DeleteRoom");
 		    		String id = command[1];
-    				dbAdministrator.removeActiveRoom(sender);
+    				//dbAdministrator.removeActiveRoom(sender);
+		    		dbAdministrator.setActiveRoom(sender, null);
         	    	dbAdministrator.removeChat(id);
         	    	result.add(reply.DELETEOK.toString());
     				result.add(id);
@@ -231,7 +237,8 @@ public class MessageParser {
 		    		id_room = command[1];
     				id_user = command[2];
     				if(dbAdministrator.isUserInChat(sender, id_room)){
-    	    			dbAdministrator.removeActiveRoom(id_user);
+    	    			//dbAdministrator.removeActiveRoom(id_user);
+    					dbAdministrator.setActiveRoom(id_user, null);
     	    			result.add(reply.KICKROK.toString());
     				}
     				else result.add(reply.USERNOTROOM.toString());

@@ -1,86 +1,42 @@
 package tmdad.chat.model;
 
-import java.util.Map.Entry;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.json.JSONObject;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+import javax.validation.constraints.NotNull;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-public class ChatRoom {
+@Entity
+@Table(name = "chatroom")
+@NoArgsConstructor
+public class Chatroom {
+	
+	@Id @NotNull
+	@GeneratedValue(strategy=GenerationType.AUTO)
+	@Getter @Setter
+	private int idchatroom;
+	
+	@NotNull
+	@Getter @Setter
+	private String admin;
+	
+	@NotNull
+	@Getter @Setter
+	private boolean multipleusers;
+	
+	@NotNull
+	@Getter @Setter
+	private String name;
 
-	@Setter @Getter private String id;
-	
-	@Setter @Getter private Map<WebSocketSession, String> userUsernameMap;
-	
-	@Setter @Getter private String admin;
-	
-	@Setter @Getter private int nUser;
-	
-	public ChatRoom(String id, String admin, WebSocketSession session){
-		this.id = id;
-		this.admin = admin;
-		this.nUser = 1;
-		userUsernameMap = new ConcurrentHashMap<>();
-		userUsernameMap.put(session, admin);
+	public Chatroom(String admin, boolean multiple, String name) {
+		this.admin=admin;
+		this.multipleusers=multiple;
+		this.name=name;
 	}
-	
-	// Enviar el mensaje text a la sala con el identificador id
-	public void sendMessageRoom(TextMessage msg, String sender, String type){
-		String timestamp = new SimpleDateFormat("HH:mm").format(new Date());			
-		
-		JSONObject message = new JSONObject();
-		message.put("type", type);
-		message.put("content", "<b>" + sender + ":</b> " + msg.getPayload() + " (" + timestamp + ")");
-		
-		TextMessage m = new TextMessage(message.toString());
-		
-		userUsernameMap.keySet().stream().filter(WebSocketSession::isOpen).forEach(session -> {
-	        try {
-	            session.sendMessage(m);
-	        } catch (Exception e) {
-	            e.printStackTrace();
-	        }
-	    });
-	}
-	
-	public WebSocketSession getUser(String username){
-		for (Entry<WebSocketSession, String> entry : userUsernameMap.entrySet()) {
-	        if (entry.getValue().equals(username)) {
-	            return entry.getKey();
-	        }
-	    }
-	    return null;
-	}
-	
-	public String getUser(WebSocketSession session){
-		return userUsernameMap.get(session);
-	}
-		
-	public boolean existsUser(String username){
-		return userUsernameMap.containsValue(username);
-	}
-	
-	public void addUser(WebSocketSession session, String username){
-		userUsernameMap.put(session, username);
-		this.nUser++;
-	}
-	
-	public void removeUser(WebSocketSession session){
-		userUsernameMap.remove(session);
-		this.nUser--;
-	}
-	
-	public void removeUser(String username){
-		userUsernameMap.entrySet()
-		   .removeIf(entry -> (username.equals(entry.getValue())));
-		this.nUser--;
-	}
-	
 }

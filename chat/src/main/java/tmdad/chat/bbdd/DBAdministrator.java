@@ -2,13 +2,29 @@ package tmdad.chat.bbdd;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import tmdad.chat.model.Chatroom;
+import tmdad.chat.model.Mensaje;
+import tmdad.chat.model.Usuario;
+
+@Component
 public class DBAdministrator {
 	private Connection con;
+	
+	@Autowired
+	private UsuarioRepository userRepository;
+	@Autowired 
+	private MensajeRepository msgRepository;
+	@Autowired 
+	private ChatroomRepository chatRepository;
+	
 	
 	public DBAdministrator() {
 		MySQLConnection.connect();
@@ -18,329 +34,159 @@ public class DBAdministrator {
 	/* TABLA USUARIO */
 	
 	public void insertUser(String username, String pass, boolean root){
-		String query = "INSERT INTO usuario (username, password, root, activeroom) "
-				+"VALUES ('" + username + "','" + pass + "'," + root + ",null)";
-		Statement st;
-		try {
-			st = con.createStatement();
-			st.executeUpdate(query);
-			st.close();
-		} catch(SQLException e){ System.err.println(e);}  
+		Usuario u = new Usuario(username, pass, root, null);
+		userRepository.save(u);
 	}
 	
 	public void removeUser(String username){
-		String query = "DELETE FROM usuario WHERE username='" + username + "';";
-		Statement st;
-		try {
-			st = con.createStatement();
-		    st.executeUpdate(query);
-		    st.close();
-		} catch(SQLException e){ System.err.println(e);}  
+		Usuario u = userRepository.findById(username).orElse(null);
+		userRepository.delete(u);
 	}
 
 	public boolean existsUser(String username){
-		String query = "SELECT * FROM usuario WHERE username='" + username + "';";
-		Statement st;
-		ResultSet rs;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-			boolean result = rs.next();
-			st.close();
-			return result;
-		} catch(SQLException e){ System.err.println(e);}  
+		Usuario u = userRepository.findById(username).orElse(null);
+		if(u == null) return false;
 		return true;
 	}
 	
 	public boolean verifyUser(String username, String pass){
-		String query = "SELECT * FROM usuario WHERE username='" + username + "'"
-				+ "AND password='" + pass + "';";
-		Statement st;
-		ResultSet rs;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-			boolean result = rs.next();
-			st.close();
-			return result;
-		} catch(SQLException e){ System.err.println(e);}  
+		Usuario u = userRepository.findById(username).orElse(null);
+		if(u != null && u.getPassword().equals(pass)) return true;
 		return false;
 	}
 	
 	public void setActiveRoom(String username, String id_room){
-		String query = "UPDATE usuario SET activeroom='" + id_room 
-				+ "' WHERE username='" + username + "';";
-		Statement st;
-		try {
-			st = con.createStatement();
-
-			st.executeUpdate(query);
-			st.close();
-		} catch(SQLException e){ System.err.println(e);}  
-	}
-	
-	public void removeActiveRoom(String username){
-		String query = "UPDATE usuario SET activeroom=null WHERE username='" 
-				+ username + "';";
-		Statement st;
-		try {
-			st = con.createStatement();
-
-			st.executeUpdate(query);
-			st.close();
-		} catch(SQLException e){ System.err.println(e);}  
+		Usuario u = userRepository.findById(username).orElse(null);
+		if(u != null){
+			u.setActiveroom(id_room);
+			userRepository.save(u);
+		}
 	}
 	
 	public String getActiveRoom(String username){
-		String query = "SELECT activeroom FROM usuario WHERE username='" + username + "';";
-		Statement st;
-		ResultSet rs;
-		String id_room = "";
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-		    while (rs.next()){
-		    	id_room = rs.getString("activeroom");
-		    }
-		} catch(SQLException e){ System.err.println(e);}  
-    	System.out.println("Chat activo " + id_room);
-	    return id_room;
+		System.out.println(username);
+		Usuario u = userRepository.findById(username).orElse(null);
+		if(u != null) return u.getActiveroom();
+		return null;
 	}
 	
 	public boolean isRoot(String username){
-		String query = "SELECT root FROM usuario WHERE username='" + username + "';";
-		Statement st;
-		ResultSet rs;
-		boolean is_root = false;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-		    while (rs.next()){
-		    	is_root = rs.getBoolean("root");
-		    }
-		} catch(SQLException e){ System.err.println(e);}  
-    	System.out.println("Es asmin " + is_root);
-	    return is_root;
+		Usuario u = userRepository.findById(username).orElse(null);
+		if(u != null) return u.isRoot();
+		return false;
 	}
 	
 	public ArrayList<String> getUsersChat(String id_activeChat){
-		ArrayList<String> users = new ArrayList<>();
-		String query = "SELECT username FROM usuario WHERE activeroom = '" 
-				+ id_activeChat + "';";
-		Statement st;
-		ResultSet rs;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-		    while (rs.next()){
-		    	String u = rs.getString("username");
-		    	users.add(u);
-		    }
-		} catch(SQLException e){ System.err.println(e);}  
+		ArrayList<String> users = new ArrayList<String>();
+		users.addAll(userRepository.findByChat(id_activeChat));
 		return users;
 	}
 	
 	/* TABLA CHATROOM */
 	
 	public void insertChat(String name, String admin, boolean multiple){
-		String query = "INSERT INTO chatroom (name, admin, multipleusers) "
-				+"VALUES ('" + name + "','" + admin + "'," + multiple + ");";
-		Statement st;
-		try {
-			st = con.createStatement();
-			st.executeUpdate(query);
-			st.close();
-		} catch(SQLException e){ System.err.println(e);}  
+		Chatroom c = new Chatroom(admin, multiple, name);
+		chatRepository.save(c);
 	}
 
 	public boolean existsChat(String name, boolean multiple){
-		String query = "SELECT * FROM chatroom WHERE name='" + name + "' AND multipleusers=" + multiple + ";";
-		Statement st;
-		ResultSet rs;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-			boolean result = rs.next();
-			st.close();
-			return result;
-		} catch(SQLException e){ System.err.println(e);}  
+		List<Chatroom> c = chatRepository.findByNameMul(name, multiple);
+		if(c == null || c.isEmpty()) return false;
 		return true;
 	}
 	
 	public void removeChat(String name){
-		String query = "DELETE FROM chatroom WHERE name='" + name + "';";
-		Statement st;
-		try {
-			st = con.createStatement();
-		    st.executeUpdate(query);
-		    st.close();
-		} catch(SQLException e){ System.err.println(e);}  
+		List<Chatroom> c = chatRepository.findByName(name);
+		chatRepository.delete(c.get(0));
 	}
 
 	public boolean isAdmin(String name, String username){
-		String query = "SELECT admin FROM chatroom WHERE name='" + name + "';";
-		Statement st;
-		ResultSet rs;
-		String admin = "";
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-		    while (rs.next()){
-		    	admin = rs.getString("admin");
-		    }
-		    if(admin.equals(username)) return true;
-		} catch(SQLException e){ System.err.println(e);}  
-	    return false;
+		List<Chatroom> c = chatRepository.findByName(name);
+		if(c != null && !c.isEmpty() && c.get(0).getAdmin().equals(username)) return true;
+		return false;
 	}
 
 	public boolean isMultiple(String name){
-		String query = "SELECT multipleusers FROM chatroom WHERE name='" + name + "';";
-		Statement st;
-		ResultSet rs;
-		boolean multiple = false;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-		    while (rs.next()){
-		    	multiple = rs.getBoolean("multipleusers");
-		    }
-		} catch(SQLException e){ System.err.println(e);}  
-	    return multiple;
+		List<Chatroom> c = chatRepository.findByName(name);
+		if(c != null && !c.isEmpty()) return c.get(0).isMultipleusers();
+		return false;
 	}
 	
 	/* TODO que funcione por fechas */
 	/* TODO otra opcin es añadir separar el campo de activechat en 2: chat (string) y activechat (bool) */
 	public boolean isUserInChat(String username, String name){
-		String query = "SELECT * FROM usuario WHERE username='" + username 
-				+ "' AND activeroom='" + name + "';";
-		System.out.println(query);
-		Statement st;
-		ResultSet rs;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-			boolean result = rs.next();
-			st.close();
-			return result;
-		} catch(SQLException e){ System.err.println(e);}  
+		System.out.println(username);
+		System.out.println(name);
+		if(name == null || name.equals("")) return false;
+		Usuario u = userRepository.findById(username).orElse(null);
+		if(u != null && u.getActiveroom().equals(name)) return true;
 		return false;
 	}
 	
 	/* TABLA MENSAJE */
 	
 	public void insertMsg(String sender, String dst, long timestamp, String msg, String type){
-		String query = "INSERT INTO mensajes (sender, dst, timestamp, msg, type) "
-				+"VALUES ('" + sender + "','" + dst + "'," + timestamp + ",'" + msg + "','" + type + "');";
-		Statement st;
-		try {
-			st = con.createStatement();
-			st.executeUpdate(query);
-			st.close();
-		} catch(SQLException e){ System.err.println(e);}  
+		Mensaje m = new Mensaje(sender, dst, timestamp, msg, type);
+		msgRepository.save(m);
 	}
 
 	public ArrayList<String> getMsg(String id, String type, String username, boolean multiple){
+		List<Mensaje> mensajes;
 		ArrayList<String> msgs = new ArrayList<>();
-		
-		String query = "SELECT sender, timestamp, msg FROM mensajes, chatroom WHERE type='"+ type 
-				+ "' AND dst='" + id + "'";
-		
 		if(type.equals("chat")){
-			query = query + " AND name=dst AND multipleusers=" + multiple;
-			if(multiple){
-				long time = getDateJoin(username, id);
-				query = query + " AND timestamp >= " + time;
-			}
+			long time = getDateJoin(username, id);
+			mensajes = msgRepository.findMsgChat(type, id, time, multiple); 
+		}
+		else{
+			mensajes = msgRepository.findMsg(type, id); 
 		}
 		
-		query = query + " ORDER BY timestamp;";
-		System.out.println(query);
-		Statement st;
-		ResultSet rs;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-		    while (rs.next()){
-		    	String s = rs.getString("sender");
-		    	long t = rs.getLong("timestamp");
-		    	String m = rs.getString("msg");
-		    	String timestamp = new SimpleDateFormat("HH:mm").format(t);	
-		    	String msg = "<b>" + s + ":</b> " + m + " (" + timestamp + ")";
-		    	msgs.add(msg);
-		    }
-		} catch(SQLException e){ System.err.println(e);}  
-		
+		for(int i = 0; i < mensajes.size(); i++){
+			Mensaje mensaje = mensajes.get(i);
+			String s = mensaje.getSender();
+	    	long t = mensaje.getTimestamp();
+	    	String m = mensaje.getMsg();
+	    	String timestamp = new SimpleDateFormat("HH:mm").format(t);	
+	    	String msg = "<b>" + s + ":</b> " + m + " (" + timestamp + ")";
+	    	msgs.add(msg);
+		}
 		return msgs;
+
 	}
 	
 	
 	/* TODO */
 	public void removeMsgRoom(String id_room){
-		String query = "DELETE FROM mensajes WHERE type='chat' AND dst='" + id_room + "';";
-		Statement st;
-		try {
-			st = con.createStatement();
-		    st.executeUpdate(query);
-		    st.close();
-		} catch(SQLException e){ System.err.println(e);}  
+		List<Mensaje> mensajes = msgRepository.findMsg("chat", id_room); 
+		for(int i = 0; i < mensajes.size(); i++){
+			Mensaje mensaje = mensajes.get(i);
+			msgRepository.delete(mensaje);
+		}
 	}
 	
 	public long getDateJoin(String username, String id_room){
-		String query = "SELECT timestamp FROM chat.mensajes WHERE type='notification' AND dst='"
-				+ username + "' AND msg ='Te has unido a la sala " + id_room 
-				+ "' ORDER BY timestamp DESC LIMIT 1;";
-		Statement st;
-		ResultSet rs;
-		long time = 0;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query);
-		    while (rs.next()){
-		    	time = rs.getLong("timestamp");
-		    }
-		} catch(SQLException e){ System.err.println(e);}  
-	    return time;
+		System.out.println("Te has unido a la sala " + id_room);
+		List<Long> timestamps = msgRepository.findMsgDate("notification", username, "Te has unido a la sala " + id_room ); 
+	    return timestamps.get(0);
 	}
 	
 	public boolean hasBeenInvited(String username, String id_room){
-		String query_inv = "SELECT timestamp FROM chat.mensajes WHERE type='notification' AND dst='"
-				+ username + "' AND msg ='Has sido invitado a la sala " + id_room + " (JOINROOM " + id_room + " para aceptar)" 
-				+ "' ORDER BY timestamp DESC LIMIT 1;";
-		
-		String query_leave = "SELECT timestamp from mensajes WHERE type='notification' AND "
-				+ "(msg='Has abandonado la sala " + id_room + "' OR msg='Has sido expulsado de la sala " 
-				+ id_room + "') ORDER BY timestamp DESC LIMIT 1;";
-		
-		System.out.println(query_inv);
-		System.out.println(query_leave);
-		
-		/* TODO comprobar que la fecha de la invitacion sea posterior a la fecha en la que haya abandonado el grupo en caso en el que lo haya abandonado */
-		Statement st;
-		ResultSet rs;
 		long time_inv = 0, time_leave = 0;
-		try {
-			st = con.createStatement();
-			// execute the query, and get a java resultset
-			rs = st.executeQuery(query_inv);
-		    while (rs.next()){
-		    	time_inv = rs.getLong("timestamp");
-		    }
-		    rs = st.executeQuery(query_leave);
-		    while (rs.next()){
-		    	time_leave = rs.getLong("timestamp");
-		    }
-		} catch(SQLException e){ System.err.println(e);}  
+		List<Long> timestamps;
+		
+		timestamps = msgRepository.findMsgDate("notification", username, "Has sido invitado a la sala " + id_room + " (JOINROOM " + id_room + " para aceptar)" ); 
+		if(timestamps != null && !timestamps.isEmpty()) time_inv = timestamps.get(0);
+		
+		timestamps = msgRepository.findMsgDate("notification", username, "Has abandonado la sala " + id_room); 
+		if(timestamps != null && !timestamps.isEmpty()) time_leave = timestamps.get(0);
+		else{
+			timestamps = msgRepository.findMsgDate("notification", username, "Has sido expulsado de la sala " + id_room); 
+			if(timestamps != null && !timestamps.isEmpty()) time_leave = timestamps.get(0);
+		}
+			
+		System.out.println(time_inv);
+		System.out.println(time_leave);
+		
 		if (time_inv == 0) return false;
 		else if(time_inv != 0 && time_leave == 0) return true;
 		else if(time_inv < time_leave) return false;

@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.json.JSONObject;
 import org.springframework.web.socket.TextMessage;
@@ -14,12 +12,9 @@ import org.springframework.web.socket.WebSocketSession;
 import lombok.Getter;
 import lombok.Setter;
 import tmdad.chat.bbdd.DBAdministrator;
-import tmdad.chat.model.ChatRoom;
 
 public class ChatRoomController {
 	
-
-	@Setter @Getter static Map<String, ChatRoom> chatRooms = new ConcurrentHashMap<>();
 	
 	@Getter @Setter private int nChatRooms;
 	
