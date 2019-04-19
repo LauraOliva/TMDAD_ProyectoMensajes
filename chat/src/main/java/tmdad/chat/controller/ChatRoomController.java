@@ -13,7 +13,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import lombok.Getter;
 import lombok.Setter;
-import tmdad.chat.bbdd.DBController;
+import tmdad.chat.bbdd.DBAdministrator;
 import tmdad.chat.model.ChatRoom;
 
 public class ChatRoomController {
@@ -27,11 +27,11 @@ public class ChatRoomController {
 		nChatRooms = 0;
 	}
 	
-	public void getMsgRoom(WebSocketSession session, String id_room, DBController dbController){
+	public void getMsgRoom(WebSocketSession session, String id_room, DBAdministrator dbAdministrator){
 		
-		boolean multiple = dbController.isMultiple(id_room);
+		boolean multiple = dbAdministrator.isMultiple(id_room);
 		
-		ArrayList<String> msg = dbController.getMsg(id_room, "chat", UserController.getUsername(session), multiple);
+		ArrayList<String> msg = dbAdministrator.getMsg(id_room, "chat", UserController.getUsername(session), multiple);
 		if(session.isOpen()){
 			JSONObject message = new JSONObject();
 			message.put("type", "chat");
@@ -48,8 +48,8 @@ public class ChatRoomController {
 		
 	}
 	
-	public void sendMessageRoom(String id, TextMessage msg, String sender, String type, DBController dbController){
-		ArrayList<String> users = dbController.getUsersChat(id);
+	public void sendMessageRoom(String id, TextMessage msg, String sender, String type, DBAdministrator dbAdministrator){
+		ArrayList<String> users = dbAdministrator.getUsersChat(id);
 		
 		Date date= new Date();
 		String timestamp = new SimpleDateFormat("HH:mm").format(date);			
@@ -60,7 +60,7 @@ public class ChatRoomController {
 		
 		TextMessage m = new TextMessage(message.toString());
 		long time = date.getTime();
-		dbController.insertMsg(sender, id, time, msg.getPayload(), type);
+		dbAdministrator.insertMsg(sender, id, time, msg.getPayload(), type);
 		UserController.userUsernameMap.entrySet().stream().forEach(entry -> {
 	        try {
 	        	WebSocketSession session = entry.getValue();

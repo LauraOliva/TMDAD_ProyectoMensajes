@@ -11,7 +11,7 @@ import org.json.JSONObject;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import tmdad.chat.bbdd.DBController;
+import tmdad.chat.bbdd.DBAdministrator;
 
 public class UserController {
 	public static Map<String, WebSocketSession> userUsernameMap = new ConcurrentHashMap<>();
@@ -30,7 +30,7 @@ public class UserController {
 	    return null;
 	}
 	
-	public void sendNotificationToUser(String not, WebSocketSession session, String type, DBController dbController){
+	public void sendNotificationToUser(String not, WebSocketSession session, String type, DBAdministrator dbAdministrator){
 		JSONObject notification = new JSONObject();
 		notification.put("type", type);
 		notification.put("content", "<b>System</b>: " + not);
@@ -46,14 +46,14 @@ public class UserController {
 			String u = getUsername(session);
 			Date date= new Date();
 			long time = date.getTime();
-			dbController.insertMsg("System", u, time , not, type);
+			dbAdministrator.insertMsg("System", u, time , not, type);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 	
-	public void getNotificationUser(WebSocketSession session, DBController dbController){
-		ArrayList<String> not = dbController.getMsg(getUsername(session), "notification", getUsername(session), false);
+	public void getNotificationUser(WebSocketSession session, DBAdministrator dbAdministrator){
+		ArrayList<String> not = dbAdministrator.getMsg(getUsername(session), "notification", getUsername(session), false);
 		if(session.isOpen()){
 			JSONObject message = new JSONObject();
 			message.put("type", "notification");
