@@ -1,3 +1,4 @@
 TRUNCATE TABLE usuario;
 TRUNCATE TABLE chatroom;
 TRUNCATE TABLE mensajes;
+TRUNCATE TABLE files;

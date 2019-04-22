@@ -6,9 +6,10 @@ import java.util.ArrayList;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
+import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 
 import tmdad.chat.bbdd.DBAdministrator;
 import tmdad.chat.controller.ChatRoomController;
@@ -16,7 +17,7 @@ import tmdad.chat.controller.MessageParser;
 import tmdad.chat.controller.UserController;
 
 @Component
-public class WebSocketHandler extends TextWebSocketHandler{
+public class MsgWebSocketHandler extends AbstractWebSocketHandler {
 
 	MessageParser msgParser = new MessageParser();
 	UserController userController = new UserController();
@@ -24,11 +25,19 @@ public class WebSocketHandler extends TextWebSocketHandler{
 	@Autowired DBAdministrator dbAdministrator;
 
 	@Override
+    protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
+        System.err.println("hello");
+        String sender = UserController.getUsername(session);
+        String id = dbAdministrator.getActiveRoom(sender);
+        chatController.sendFileRoom(id, message, sender, dbAdministrator);
+    }
+	
+	
+	@Override
 	protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
 		// Obtener nombre de usuario
 		String sender = UserController.getUsername(session);
-	    System.out.println("New Text Message Received From " + sender);
-	    System.out.println(message.getPayload());
+
 	    
 	    // Leer el json para saber que tipo de mensaje es
 	    JSONObject payload = new JSONObject(message.getPayload());
@@ -37,11 +46,10 @@ public class WebSocketHandler extends TextWebSocketHandler{
     	String id_room;
 		String id_user;
 				
-		System.out.println(status.get(0));
+
 		MessageParser.reply r = MessageParser.reply.valueOf(status.get(0).toUpperCase());
     	switch(r){
     		case WRONGCOMMAND:
-    			System.err.println("CREATEROOM id_room");
     			// Notificar al usuario
     			userController.sendNotificationToUser("Error en el número de parámetros: usa HELP", session, "notification", dbAdministrator);
     			break;
@@ -165,7 +173,6 @@ public class WebSocketHandler extends TextWebSocketHandler{
     			userController.sendNotificationToUser("El usuario " + id_user + " ya esta en la sala", session, "notification", dbAdministrator);
     			break;
     		case NOTKNOWN:
-    			System.err.println("Comando desconocido");
     			// Notificar al usuario
     			userController.sendNotificationToUser("Comando desconocido", session, "notification", dbAdministrator);
     			break;

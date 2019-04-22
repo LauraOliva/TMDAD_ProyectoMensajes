@@ -7,11 +7,12 @@ const commandWindow = document.getElementById("commands");
 const sendButton = document.getElementById("send");
 const messageInput = document.getElementById("message");
 
+const sendFileButton = document.getElementById("sendFile");
+
 const sendCommandButton = document.getElementById("sendCommand");
 const commandInput = document.getElementById("command");
 
-
-const socket = new WebSocket("ws://localhost:8080/socket");
+var socket = new WebSocket("ws://192.168.1.134:8080/msg");
 socket.binaryType = "arraybuffer";	
 
 function connect(event) {
@@ -39,27 +40,35 @@ socket.onopen = function (event) {
 };
  
 socket.onmessage = function (event) {
-	var message = JSON.parse(`${event.data}`);
-	
-	if (message.type === 'notification') {
-		addCommandToWindow(message.content);
-	}
-	else if(message.type === 'chat'){		
-		addMessageToWindow(message.content);
-	}
-	else if(message.type === 'kick'){
-		var msg = {
-			content : "",
-			type : 'kick'
-		};
-		sendMessage(JSON.stringify(msg));
-		addMessageToWindow("Has sido expulsado de la sala");
-	}
-	else if(message.type === 'clean'){
-		cleanMessageWindow();
+
+	if (event.data instanceof ArrayBuffer) {
+            addMessageToWindow('Got Image:');
+            addImageToWindow(event.data);
+    } else {
+        
+		var message = JSON.parse(`${event.data}`);
+		
+		if (message.type === 'notification') {
+			addCommandToWindow(message.content);
+		}
+		else if(message.type === 'chat'){		
+			addMessageToWindow(message.content);
+		}
+		else if(message.type === 'kick'){
+			var msg = {
+				content : "",
+				type : 'kick'
+			};
+			sendMessage(JSON.stringify(msg));
+			addMessageToWindow("Has sido expulsado de la sala");
+		}
+		else if(message.type === 'clean'){
+			cleanMessageWindow();
+		}
 	}
 
 };
+
  
 sendCommandButton.onclick = function(event){
 	var messageContent = commandInput.value;
@@ -104,4 +113,52 @@ function addMessageToWindow(message) {
 function addCommandToWindow(message) {
     commandWindow.innerHTML += `<div>${message}</div>`;
 	commandWindow.scrollTop = commandWindow.scrollHeight;
+}
+
+sendFileButton.onclick = function (event) {
+
+    var file = document.getElementById('filename').files[0];
+    if(file){
+		
+		uploadFile(file)
+	}
+	event.preventDefault();	
+};
+
+function sendFile(file) {
+
+    var reader = new FileReader();
+    var rawData = new Blob();            
+    reader.loadend = function() { }
+    reader.onload = function(e) {
+        rawData = e.target.result;
+        socket.send(rawData);
+    }
+    reader.readAsArrayBuffer(file);
+
+}
+
+function uploadFile(file) {
+    var formData = new FormData();
+    formData.append("file", file);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/uploadFile");
+
+    xhr.onload = function() {
+        console.log(xhr.responseText);
+        var response = JSON.parse(xhr.responseText);
+        if(xhr.status == 200) {
+
+            var res = "<a href='" + response.fileDownloadUri + "' target='_blank'>" + "Descargar fichero" + "</a>";
+
+            var message = {
+					content : res,
+					type : 'chat'
+				};
+				sendMessage(JSON.stringify(message));
+        }
+    }
+
+    xhr.send(formData);
 }

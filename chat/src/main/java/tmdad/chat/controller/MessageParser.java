@@ -161,6 +161,7 @@ public class MessageParser {
 		    			// Si no -> crear sala 
 		    			else{
 		    				dbAdministrator.insertChat(possible_name_1, sender, false);
+		    				id_active_room = possible_name_1;
 		    				result.add(reply.CHATUSERCREATE.toString());
 		    				result.add(possible_name_1);
 		    				result.add(user2);

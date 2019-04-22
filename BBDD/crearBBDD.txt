@@ -1,0 +1,5 @@
+Para crear la base de datos se ha de modificar la primera linea del fichero
+src/main/resources/application.properties:
+
+spring.jpa.hibernate.ddl-auto=create
+

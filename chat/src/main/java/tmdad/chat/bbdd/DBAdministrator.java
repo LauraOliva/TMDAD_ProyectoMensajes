@@ -1,8 +1,5 @@
 package tmdad.chat.bbdd;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,7 +13,6 @@ import tmdad.chat.model.Usuario;
 
 @Component
 public class DBAdministrator {
-	private Connection con;
 	
 	@Autowired
 	private UsuarioRepository userRepository;
@@ -24,13 +20,7 @@ public class DBAdministrator {
 	private MensajeRepository msgRepository;
 	@Autowired 
 	private ChatroomRepository chatRepository;
-	
-	
-	public DBAdministrator() {
-		MySQLConnection.connect();
-		con = MySQLConnection.con;
-	}
-	
+		
 	/* TABLA USUARIO */
 	
 	public void insertUser(String username, String pass, boolean root){
@@ -133,7 +123,7 @@ public class DBAdministrator {
 	public ArrayList<String> getMsg(String id, String type, String username, boolean multiple){
 		List<Mensaje> mensajes;
 		ArrayList<String> msgs = new ArrayList<>();
-		if(type.equals("chat")){
+		if(type.equals("chat") && multiple){
 			long time = getDateJoin(username, id);
 			mensajes = msgRepository.findMsgChat(type, id, time, multiple); 
 		}
