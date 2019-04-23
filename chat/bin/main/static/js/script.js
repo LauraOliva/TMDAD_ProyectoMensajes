@@ -51,6 +51,9 @@ socket.onmessage = function (event) {
 		if (message.type === 'notification') {
 			addCommandToWindow(message.content);
 		}
+		else if (message.type === 'broadcast') {
+			addCommandToWindow(message.content);
+		}
 		else if(message.type === 'chat'){		
 			addMessageToWindow(message.content);
 		}

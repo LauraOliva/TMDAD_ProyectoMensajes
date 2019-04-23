@@ -37,12 +37,8 @@ public class UserController {
 		TextMessage message = new TextMessage(notification.toString());
 		try { 
 			// Enviar notificacion si esta conectado
-			if(session.isOpen()){
-				session.sendMessage(message);
-			}
-			
-			/* TODO si no enviar a la cola */
-			
+			session.sendMessage(message);
+
 			String u = getUsername(session);
 			Date date= new Date();
 			long time = date.getTime();

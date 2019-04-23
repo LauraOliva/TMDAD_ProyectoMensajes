@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
@@ -23,15 +22,6 @@ public class MsgWebSocketHandler extends AbstractWebSocketHandler {
 	UserController userController = new UserController();
 	ChatRoomController chatController = new ChatRoomController();
 	@Autowired DBAdministrator dbAdministrator;
-
-	@Override
-    protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
-        System.err.println("hello");
-        String sender = UserController.getUsername(session);
-        String id = dbAdministrator.getActiveRoom(sender);
-        chatController.sendFileRoom(id, message, sender, dbAdministrator);
-    }
-	
 	
 	@Override
 	protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
@@ -49,6 +39,16 @@ public class MsgWebSocketHandler extends AbstractWebSocketHandler {
 
 		MessageParser.reply r = MessageParser.reply.valueOf(status.get(0).toUpperCase());
     	switch(r){
+    		case HELPOK:
+    			userController.sendNotificationToUser(status.get(1), session, "notification", dbAdministrator);
+    			break;
+    		case NOTROOT:
+    			userController.sendNotificationToUser("No eres administrador", session, "notification", dbAdministrator);
+    			break;
+    		case BROADCASTOK:
+    			userController.sendNotificationToUser("Notification enviada", session, "notification", dbAdministrator);
+    			chatController.broadcast(status.get(1), dbAdministrator);
+    			break;
     		case WRONGCOMMAND:
     			// Notificar al usuario
     			userController.sendNotificationToUser("Error en el número de parámetros: usa HELP", session, "notification", dbAdministrator);
@@ -73,6 +73,7 @@ public class MsgWebSocketHandler extends AbstractWebSocketHandler {
     		case KICKOK:
     			id_room = status.get(1);
     			userController.sendNotificationToUser("Te han expulsado de la sala " + id_room, session, "notification", dbAdministrator);
+    			userController.sendNotificationToUser("", session, "clean", dbAdministrator);
     	    	break;
     		case CREATEOK:
     			id_room = status.get(1);
@@ -130,10 +131,8 @@ public class MsgWebSocketHandler extends AbstractWebSocketHandler {
     			id_room = status.get(1);
     			userController.sendNotificationToUser("Has eliminado la sala " + id_room, userController.getSession(sender), "notification", dbAdministrator);
     			userController.sendNotificationToUser("", session, "clean", dbAdministrator);
-    	    	msg = new TextMessage( "(Administrador) ha eliminado la sala " + id_room);
-    	    	chatController.sendMessageRoom(id_room, msg, sender, "chat", dbAdministrator);
 				// Avisar al resto de usuarios de que su activeroom es null
-    	    	chatController.sendMessageRoom(id_room, msg, sender, "kick", dbAdministrator);
+    	    	chatController.sendMessageRoom(id_room, new TextMessage(""), sender, "kick", dbAdministrator);
     	    	break;
     		case KICKROK:
 				id_user = status.get(1);

@@ -105,8 +105,6 @@ public class DBAdministrator {
 	/* TODO que funcione por fechas */
 	/* TODO otra opcin es añadir separar el campo de activechat en 2: chat (string) y activechat (bool) */
 	public boolean isUserInChat(String username, String name){
-		System.out.println(username);
-		System.out.println(name);
 		if(name == null || name.equals("")) return false;
 		Usuario u = userRepository.findById(username).orElse(null);
 		if(u != null && u.getActiveroom().equals(name)) return true;
@@ -144,8 +142,6 @@ public class DBAdministrator {
 
 	}
 	
-	
-	/* TODO */
 	public void removeMsgRoom(String id_room){
 		List<Mensaje> mensajes = msgRepository.findMsg("chat", id_room); 
 		for(int i = 0; i < mensajes.size(); i++){
@@ -155,7 +151,6 @@ public class DBAdministrator {
 	}
 	
 	public long getDateJoin(String username, String id_room){
-		System.out.println("Te has unido a la sala " + id_room);
 		List<Long> timestamps = msgRepository.findMsgDate("notification", username, "Te has unido a la sala " + id_room ); 
 	    return timestamps.get(0);
 	}
@@ -163,8 +158,8 @@ public class DBAdministrator {
 	public boolean hasBeenInvited(String username, String id_room){
 		long time_inv = 0, time_leave = 0;
 		List<Long> timestamps;
-		
-		timestamps = msgRepository.findMsgDate("notification", username, "Has sido invitado a la sala " + id_room + " (JOINROOM " + id_room + " para aceptar)" ); 
+		System.out.println("Se ha invitado a unirse a la sala a " + username);
+		timestamps = msgRepository.findMsgDate("chat", id_room, "Se ha invitado a unirse a la sala a " + username ); 
 		if(timestamps != null && !timestamps.isEmpty()) time_inv = timestamps.get(0);
 		
 		timestamps = msgRepository.findMsgDate("notification", username, "Has abandonado la sala " + id_room); 

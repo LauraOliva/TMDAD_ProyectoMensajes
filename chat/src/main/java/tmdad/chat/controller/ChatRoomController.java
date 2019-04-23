@@ -10,8 +10,6 @@ import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import lombok.Getter;
-import lombok.Setter;
 import tmdad.chat.bbdd.DBAdministrator;
 
 public class ChatRoomController {
@@ -66,22 +64,19 @@ public class ChatRoomController {
 	    });
 	}
 	
-	public void sendFileRoom(String id, BinaryMessage file, String sender, DBAdministrator dbAdministrator){
-		ArrayList<String> users = dbAdministrator.getUsersChat(id);
-		
-		/* TODO insertar fichero en la bbdd */
-		
+	public void broadcast(String msg, DBAdministrator dbAdministrator){
+		JSONObject notification = new JSONObject();
+		notification.put("type", "broadcast");
+		notification.put("content", "<b>Root</b>: " + msg);
+		TextMessage message = new TextMessage(notification.toString());
+		Date date= new Date();
+		long time = date.getTime();			
+		dbAdministrator.insertMsg("root", "", time, message.getPayload(), "broadcast");
 		UserController.userUsernameMap.entrySet().stream().forEach(entry -> {
 	        try {
 	        	WebSocketSession session = entry.getValue();
-	        	if(session.isOpen()){
-		        	String u = entry.getKey();
-		            if(users.contains(u)){
-		            	// Enviar mensaje si esta conectado
-		            	if(session.isOpen()) session.sendMessage(file);
-		            	
-		            }
-	        	}
+	        	session.sendMessage(message);
+		            
 	        } catch (Exception e) { e.printStackTrace(); }
 	    });
 	}

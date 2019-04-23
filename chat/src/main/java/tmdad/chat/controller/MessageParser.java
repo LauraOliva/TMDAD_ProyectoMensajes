@@ -10,12 +10,34 @@ import org.springframework.web.socket.WebSocketSession;
 import tmdad.chat.bbdd.DBAdministrator;
 
 public class MessageParser {
-	public static enum commands { CREATEROOM, CHATUSER, JOINROOM, LEAVEROOM, 
-		CLOSEROOM, OPENROOM, INVITEROOM, DELETEROOM, KICKROOM }
+	public static enum commands { HELP, CREATEROOM, CHATUSER, JOINROOM, LEAVEROOM, 
+		CLOSEROOM, OPENROOM, INVITEROOM, DELETEROOM, KICKROOM, BROADCAST }
 	public static enum typeMessage { CHAT, VERIFY, KICK, COMMAND}
-	public static enum reply { CHATOK, VERIFYACTIVE, VERIFYNOTACTIVE, KICKOK, NOTKNOWN, WRONGCOMMAND, NOTADMIN,
+	public static enum reply {HELPOK, CHATOK, VERIFYACTIVE, VERIFYNOTACTIVE, KICKOK, NOTKNOWN, WRONGCOMMAND, NOTADMIN,
 		ROOMNOTEXISTS, ROOMEXISTS, USERINROOM, CREATEOK, CHATUSERMSG, CHATUSERCREATE, USERNOTEXISTS, JOINOK, 
-		NOTINVITED, LEAVEOK, CLOSEOK, OPENOK, INVITEOK, DELETEOK, KICKROK, USERNOTROOM, NOACTIVEROOM}
+		NOTINVITED, LEAVEOK, CLOSEOK, OPENOK, INVITEOK, DELETEOK, KICKROK, USERNOTROOM, NOACTIVEROOM, NOTROOT, BROADCASTOK}
+	
+	private String getHelp(){
+		String help = "";
+		for (commands cmd : commands.values()) { 
+			if(cmd.equals(commands.KICKROOM) || cmd.equals(commands.INVITEROOM)){
+				help += "<div><b>" + cmd.toString() + "</b> id_room id_user </div>";
+			}
+			else if(cmd.equals(commands.CLOSEROOM) || cmd.equals(commands.HELP)){
+				help += "<div><b>" + cmd.toString() + "</b> </div>";
+			}
+			else if(cmd.equals(commands.CHATUSER)){
+				help += "<div><b>" + cmd.toString() + "</b> id_user </div>";
+			}
+			else if(cmd.equals(commands.BROADCAST)){
+				help += "<div><b>" + cmd.toString() + "</b> msg </div>";
+			}
+			else{
+				help += "<div><b>" + cmd.toString() + "</b> id_room </div>";
+	    	}
+        }
+		return help;
+	}
 	
 	private ArrayList<String> checkCreate(String id, DBAdministrator dbAdministrator, String sender){
 		ArrayList<String> result = new ArrayList<String>();
@@ -39,17 +61,10 @@ public class MessageParser {
 	    JSONObject payload = new JSONObject(message.getPayload());
 	    String type = payload.getString("type").trim().toUpperCase();
 	    
-		
 		// Obtener sala activa del usuario
-	    System.out.println("Semder " + sender);
 	    String id_active_room = null;
 	    if(sender != null) id_active_room = dbAdministrator.getActiveRoom(sender);
-	    
 
-	    System.out.println("Tipo = " + type);
-	    System.out.println("Sala = " + id_active_room);
-	    System.out.println("Sender = " + sender);
-	    
 	    if((type.equals(typeMessage.CHAT.toString()) || type.equals(typeMessage.KICK.toString())) 
 	    	&& id_active_room == null){
 	    		result.add(reply.NOACTIVEROOM.toString());
@@ -71,13 +86,16 @@ public class MessageParser {
 		    	result.add(id_active_room);
 			}
 			else{
-				dbAdministrator.insertUser(username, "1234", true);
+				boolean isRoot = false;
+				if(username.equals("root")) isRoot = true;
+				dbAdministrator.insertUser(username, "1234", isRoot);
 				result.add(reply.VERIFYNOTACTIVE.toString());
 		    	result.add(username);
 			}
 	    	/* TODO añadir contraseña */
 	    }
 	    else if(type.equals(typeMessage.KICK.toString())){
+	    	dbAdministrator.setActiveRoom(sender, null);
 	    	result.add(reply.KICKOK.toString());
     		result.add(id_active_room);	    	
 	    }
@@ -102,9 +120,11 @@ public class MessageParser {
 	    	/* Comprobar que los comandos son correctos y que los puede realizar ese usuario */
 
 	    	// Comprobar la longitud de los comandos 
-	    	if(command.length != 2 && (!cmd.equals(commands.KICKROOM) && !cmd.equals(commands.INVITEROOM) && !cmd.equals(commands.CLOSEROOM))
+	    	if(command.length != 2 && (!cmd.equals(commands.KICKROOM) && !cmd.equals(commands.INVITEROOM) 
+	    			&& !cmd.equals(commands.CLOSEROOM) && !cmd.equals(commands.HELP) && !cmd.equals(commands.BROADCAST))
 	    			|| (command.length != 3 && (cmd.equals(commands.KICKROOM) || cmd.equals(commands.INVITEROOM)))
-	    			|| (command.length != 1 && cmd.equals(commands.CLOSEROOM))){
+	    			|| (command.length != 1 && (cmd.equals(commands.CLOSEROOM) || cmd.equals(commands.HELP))
+	    			|| (command.length < 2 && cmd.equals(commands.BROADCAST)))){
 	    		result.add(reply.WRONGCOMMAND.toString());
 	    		return result;
 	    	}
@@ -136,12 +156,26 @@ public class MessageParser {
 	    		
 	    	
 	    	switch(cmd){
+	    		case HELP:
+	    			String help = getHelp();
+        	    	result.add(reply.HELPOK.toString());
+    				result.add(help);
+	    			break;
+	    		case BROADCAST:
+	    			if(dbAdministrator.isRoot(sender)){
+	    				result.add(reply.BROADCASTOK.toString());
+	    				String [] aux = content.split(" ", 2);
+	    				result.add(aux[1]);
+	    			}
+	    			else{
+	    				result.add(reply.NOTROOT.toString());
+	    			}
+	    			break;
 	    		case CREATEROOM:
 		    		System.out.println("CreateRoom");
 		    		result = checkCreate(command[1], dbAdministrator, sender);
 		    		break;
 	    		case CHATUSER:
-
     				String user2 = command[1];
 	    			String possible_name_1 = sender + "-" + user2;
 	    			String possible_name_2 = user2 + "-" + sender;	
@@ -190,6 +224,7 @@ public class MessageParser {
 		    		break;
 	    		case LEAVEROOM:
 	    			id_room = command[1];
+	    			dbAdministrator.setActiveRoom(sender, null);
         	    	result.add(reply.LEAVEOK.toString());
 	    			result.add(id_room);
 		    		break;
@@ -229,6 +264,7 @@ public class MessageParser {
     				//dbAdministrator.removeActiveRoom(sender);
 		    		dbAdministrator.setActiveRoom(sender, null);
         	    	dbAdministrator.removeChat(id);
+		    		dbAdministrator.removeMsgRoom(id);
         	    	result.add(reply.DELETEOK.toString());
     				result.add(id);
 		    		

@@ -1,5 +1,6 @@
 package tmdad.chat.model;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -36,6 +37,7 @@ public class Mensaje {
 	
 	@NotNull
 	@Getter @Setter
+	@Column(length = 500)
 	private String msg;
 	
 	@NotNull
