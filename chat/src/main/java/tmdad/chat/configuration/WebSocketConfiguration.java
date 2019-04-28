@@ -11,10 +11,10 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfiguration implements WebSocketConfigurer{
 
 	@Autowired 
-    MsgWebSocketHandler mwsHandler;
+    WebSocketHandler ws;
 	
 	@Override
 	public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-	    registry.addHandler(mwsHandler, "/msg").setAllowedOrigins("*");
+	    registry.addHandler(ws, "/msg").setAllowedOrigins("*");
 	}
 }

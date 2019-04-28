@@ -150,16 +150,16 @@ function uploadFile(file) {
 
     xhr.onload = function() {
         console.log(xhr.responseText);
-        var response = JSON.parse(xhr.responseText);
+        var response = xhr.responseText;
         if(xhr.status == 200) {
 
-            var res = "<a href='" + response.fileDownloadUri + "' target='_blank'>" + "Descargar fichero" + "</a>";
+            var res = "<a href='" + response + "' target='_blank'>" + "Descargar fichero" + "</a>";
 
             var message = {
-					content : res,
-					type : 'chat'
-				};
-				sendMessage(JSON.stringify(message));
+				content : res,
+				type : 'chat'
+			};
+			sendMessage(JSON.stringify(message));
         }
     }
 

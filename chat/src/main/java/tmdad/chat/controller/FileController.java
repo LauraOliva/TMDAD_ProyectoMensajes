@@ -15,7 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import tmdad.chat.model.DBFile;
-import tmdad.chat.model.UploadFileResponse;
 
 @RestController
 public class FileController {
@@ -25,24 +24,21 @@ public class FileController {
     
 
     @PostMapping("/uploadFile")
-    public UploadFileResponse uploadFile(@RequestParam("file") MultipartFile file) {
+    public String uploadFile(@RequestParam("file") MultipartFile file) {
     	
         DBFile dbFile = DBFileStorageService.storeFile(file);
-        System.err.println("Upload file");
 
         String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/downloadFile/")
                 .path(dbFile.getId())
                 .toUriString();
 
-        return new UploadFileResponse(dbFile.getFileName(), fileDownloadUri,
-                file.getContentType(), file.getSize());
+        return fileDownloadUri;
     }
 
     @GetMapping("/downloadFile/{fileId}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileId) {
-        System.err.println("Download file");
-    	
+
     	/* TODO comprobar que el usuario tenga permisos */
         // Load file from database
         DBFile dbFile = DBFileStorageService.getFile(fileId);

@@ -25,4 +25,6 @@ dependencies {
 
     // Use MySQL Connector-J
     compile 'mysql:mysql-connector-java'
+    
+    compile 'com.rabbitmq:amqp-client:5.7.0'
 }

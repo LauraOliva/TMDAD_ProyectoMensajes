@@ -9,7 +9,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import tmdad.chat.bbdd.DBAdministrator;
 
-public class MessageParser {
+public class CommandChecker {
 	public static enum commands { HELP, CREATEROOM, CHATUSER, JOINROOM, LEAVEROOM, 
 		CLOSEROOM, OPENROOM, INVITEROOM, DELETEROOM, KICKROOM, BROADCAST }
 	public static enum typeMessage { CHAT, VERIFY, KICK, COMMAND}

@@ -8,17 +8,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.handler.AbstractWebSocketHandler;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import tmdad.chat.bbdd.DBAdministrator;
 import tmdad.chat.controller.ChatRoomController;
-import tmdad.chat.controller.MessageParser;
+import tmdad.chat.controller.CommandChecker;
 import tmdad.chat.controller.UserController;
 
 @Component
-public class MsgWebSocketHandler extends AbstractWebSocketHandler {
+public class WebSocketHandler extends TextWebSocketHandler {
 
-	MessageParser msgParser = new MessageParser();
+	CommandChecker msgParser = new CommandChecker();
 	UserController userController = new UserController();
 	ChatRoomController chatController = new ChatRoomController();
 	@Autowired DBAdministrator dbAdministrator;
@@ -37,7 +37,7 @@ public class MsgWebSocketHandler extends AbstractWebSocketHandler {
 		String id_user;
 				
 
-		MessageParser.reply r = MessageParser.reply.valueOf(status.get(0).toUpperCase());
+		CommandChecker.reply r = CommandChecker.reply.valueOf(status.get(0).toUpperCase());
     	switch(r){
     		case HELPOK:
     			userController.sendNotificationToUser(status.get(1), session, "notification", dbAdministrator);
