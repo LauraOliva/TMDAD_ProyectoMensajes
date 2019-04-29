@@ -3,10 +3,15 @@ package tmdad.chat.bbdd;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.WebSocketSession;
 
+import tmdad.chat.controller.CommandChecker.typeMessage;
 import tmdad.chat.model.Chatroom;
 import tmdad.chat.model.Mensaje;
 import tmdad.chat.model.Usuario;
@@ -21,6 +26,18 @@ public class DBAdministrator {
 	@Autowired 
 	private ChatroomRepository chatRepository;
 		
+
+	public static Map<String, WebSocketSession> userUsernameMap = new ConcurrentHashMap<>();
+	
+	public static String getUsername(WebSocketSession session){
+		for (Entry<String, WebSocketSession> entry : userUsernameMap.entrySet()) {
+	        if (entry.getValue().equals(session)) {
+	            return entry.getKey();
+	        }
+	    }
+	    return null;
+	}
+	
 	/* TABLA USUARIO */
 	
 	public void insertUser(String username, String pass, boolean root){
@@ -54,7 +71,6 @@ public class DBAdministrator {
 	}
 	
 	public String getActiveRoom(String username){
-		System.out.println(username);
 		Usuario u = userRepository.findById(username).orElse(null);
 		if(u != null) return u.getActiveroom();
 		return null;
@@ -85,6 +101,18 @@ public class DBAdministrator {
 		return true;
 	}
 	
+	public List<String> getRooms(String sender){
+		ArrayList<String> r = new ArrayList<>();
+		List<String> rooms = chatRepository.findNames();
+		for(int i = 0; i < rooms.size(); i++){
+			if(isUserInChat(sender, rooms.get(i))){
+				r.add(rooms.get(i));
+			}
+		}
+		return r;
+		
+	}
+	
 	public void removeChat(String name){
 		List<Chatroom> c = chatRepository.findByName(name);
 		chatRepository.delete(c.get(0));
@@ -102,13 +130,36 @@ public class DBAdministrator {
 		return false;
 	}
 	
-	/* TODO que funcione por fechas */
-	/* TODO otra opcin es añadir separar el campo de activechat en 2: chat (string) y activechat (bool) */
-	public boolean isUserInChat(String username, String name){
-		if(name == null || name.equals("")) return false;
-		Usuario u = userRepository.findById(username).orElse(null);
-		if(u != null && u.getActiveroom().equals(name)) return true;
-		return false;
+	public boolean isUserInChat(String username, String id_room){		
+		if(id_room == null || id_room.equals("")) return false;
+		
+		long time_join = 0, time_leave = 0;
+		time_join = getDateJoin(username, id_room);
+		
+		List<Long> timestamps;
+		timestamps = msgRepository.findMsgDateBySender(typeMessage.CHAT.toString(), username, "ha abandonado la sala", id_room); 
+		if(timestamps != null && !timestamps.isEmpty()) time_leave = timestamps.get(0);
+		else{
+			timestamps = msgRepository.findMsgDate(typeMessage.CHAT.toString(), id_room, "(Administrador) ha expulsado de la sala " + id_room + " a " + username); 
+			if(timestamps != null && !timestamps.isEmpty()) time_leave = timestamps.get(0);
+		}
+		
+		if (time_join == 0) return false;
+		else if(time_join != 0 && time_leave == 0) return true;
+		else if(time_join < time_leave) return false;
+		else if(time_join >= time_leave) return true;
+		else return false;
+	}
+	
+	public ArrayList<String> getUsersRoom(String id_room){
+		ArrayList<String> u = new ArrayList<>();
+		List<String> usernames = userRepository.findUsernames();
+		for(int i = 0; i < usernames.size(); i++){
+			if(isUserInChat(usernames.get(i), id_room)){
+				u.add(usernames.get(i));
+			}
+		}
+		return u;
 	}
 	
 	/* TABLA MENSAJE */
@@ -143,7 +194,7 @@ public class DBAdministrator {
 	}
 	
 	public void removeMsgRoom(String id_room){
-		List<Mensaje> mensajes = msgRepository.findMsg("chat", id_room); 
+		List<Mensaje> mensajes = msgRepository.findMsg(typeMessage.CHAT.toString(), id_room); 
 		for(int i = 0; i < mensajes.size(); i++){
 			Mensaje mensaje = mensajes.get(i);
 			msgRepository.delete(mensaje);
@@ -151,27 +202,24 @@ public class DBAdministrator {
 	}
 	
 	public long getDateJoin(String username, String id_room){
-		List<Long> timestamps = msgRepository.findMsgDate("notification", username, "Te has unido a la sala " + id_room ); 
-	    return timestamps.get(0);
+		List<Long> timestamps = msgRepository.findMsgDateBySender(typeMessage.CHAT.toString(), username, "se ha unido a la sala", id_room ); 
+		if(!timestamps.isEmpty()) return timestamps.get(0);
+		else return 0;
 	}
 	
 	public boolean hasBeenInvited(String username, String id_room){
 		long time_inv = 0, time_leave = 0;
 		List<Long> timestamps;
-		System.out.println("Se ha invitado a unirse a la sala a " + username);
-		timestamps = msgRepository.findMsgDate("chat", id_room, "Se ha invitado a unirse a la sala a " + username ); 
+		timestamps = msgRepository.findMsgDate(typeMessage.CHAT.toString(), id_room, "Se ha invitado a unirse a la sala a " + username ); 
 		if(timestamps != null && !timestamps.isEmpty()) time_inv = timestamps.get(0);
 		
-		timestamps = msgRepository.findMsgDate("notification", username, "Has abandonado la sala " + id_room); 
+		timestamps = msgRepository.findMsgDateBySender(typeMessage.CHAT.toString(), username, "ha abandonado la sala", id_room); 
 		if(timestamps != null && !timestamps.isEmpty()) time_leave = timestamps.get(0);
 		else{
-			timestamps = msgRepository.findMsgDate("notification", username, "Has sido expulsado de la sala " + id_room); 
+			timestamps = msgRepository.findMsgDate(typeMessage.CHAT.toString(), id_room, "(Administrador) ha expulsado de la sala " + id_room + " a " + username); 
 			if(timestamps != null && !timestamps.isEmpty()) time_leave = timestamps.get(0);
 		}
-			
-		System.out.println(time_inv);
-		System.out.println(time_leave);
-		
+
 		if (time_inv == 0) return false;
 		else if(time_inv != 0 && time_leave == 0) return true;
 		else if(time_inv < time_leave) return false;

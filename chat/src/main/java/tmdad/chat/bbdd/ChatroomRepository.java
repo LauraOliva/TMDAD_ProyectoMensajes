@@ -15,5 +15,9 @@ public interface ChatroomRepository extends CrudRepository<Chatroom, Integer> {
 
 	@Query("SELECT c FROM Chatroom c WHERE c.name = :name AND c.multipleusers = :multiple")
     public List<Chatroom> findByNameMul(@Param("name") String name, @Param("multiple") boolean multiple);
+	
+
+	@Query("SELECT c.name FROM Chatroom c")
+    public List<String> findNames();
 
 }

@@ -23,5 +23,9 @@ public interface MensajeRepository extends CrudRepository<Mensaje, Integer> {
 	@Query("SELECT m.timestamp FROM Mensaje m WHERE m.type = :type "
 			+ "AND m.dst = :dst AND m.msg = :msg ORDER BY m.timestamp DESC")
     public List<Long> findMsgDate(@Param("type") String type, @Param("dst") String dst, @Param("msg") String msg);
-	
+
+	@Query("SELECT m.timestamp FROM Mensaje m WHERE m.type = :type "
+			+ "AND m.sender = :sender AND m.dst = :dst AND m.msg = :msg ORDER BY m.timestamp DESC")
+    public List<Long> findMsgDateBySender(@Param("type") String type, @Param("sender") String sender, @Param("msg") String msg,
+    										@Param("dst") String dst);
 }

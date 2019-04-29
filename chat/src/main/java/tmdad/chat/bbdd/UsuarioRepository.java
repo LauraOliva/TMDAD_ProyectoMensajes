@@ -11,8 +11,12 @@ import tmdad.chat.model.Usuario;
 
 @Repository
 public interface UsuarioRepository extends CrudRepository<Usuario, String> {
-		
+
 	@Query("SELECT u.username FROM Usuario u WHERE u.activeroom = :activeroom")
     public List<String> findByChat(@Param("activeroom") String activeroom); 
+	
+
+	@Query("SELECT u.username FROM Usuario u")
+    public List<String> findUsernames(); 
 
 }

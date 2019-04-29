@@ -1,7 +1,14 @@
 package tmdad.chat.controller;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.TimeoutException;
+
+import org.json.JSONObject;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -9,9 +16,14 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DeliverCallback;
 import com.rabbitmq.client.MessageProperties;
 
+import tmdad.chat.bbdd.DBAdministrator;
+import tmdad.chat.controller.CommandChecker.typeMessage;
 
+
+@Component
 public class RabbitMQAdapter {
 
+	public final static String ROOT_EXCHANGE = "rootExchange";
 	private final static String ENV_AMQPURL_NAME = "CLOUDAMQP_URL";
 	private Channel channel;
 	private Connection connection = null;
@@ -45,69 +57,124 @@ public class RabbitMQAdapter {
 		}
 	}
 	
-	public void createExchange(String name) throws IOException{
-		channel.exchangeDeclare(name, "fanout");
-	}
-	
-	public void publishExchange(String message, String exchange) throws IOException{		
-		// Publicamos el mensaje en la centralita EXCHANGE_NAME declarada
-		// antes. La clave de enrutado la dejamos vacÌa (la va a ignorar), 
-		// e indicamos que el mensaje sea durable
-		channel.basicPublish(exchange, "", MessageProperties.PERSISTENT_TEXT_PLAIN, message.getBytes());				
-		System.out.println(" [x] Enviado '" + message + "'");
-	}
-	
-	public void createQueue(String queueName, String exchangeName) throws IOException{
-		// Declaramos una centralita de tipo fanout llamada EXCHANGE_NAME
-		channel.exchangeDeclare(exchangeName, "fanout");
-		// Declaramos una cola en el broker a travÈs del canal
-		// reciÈn creado llamada queueName 
-		// Indicamos que sea durable pero no exclusiva y que 
-		// no se borre autom·ticamente cuando nos desconectemos
-		boolean durable = true;
-		channel.queueDeclare(queueName, durable, false, false, null);
-		// E indicamos que queremos que la centralita exchangeName
-		// envÌe los mensajes a la cola reciÈn creada. Para ello creamos
-		// una uniÛn (binding) entre ellas (la clave de enrutado
-		// la ponemos vacÌa, porque se va a ignorar)	
-		channel.queueBind(queueName, exchangeName, "");
+	public void bindQueue(String queueName, String exchangeName, DBAdministrator dbAdministrator){
+
+		try {
+			// Declaramos una centralita de tipo fanout llamada EXCHANGE_NAME
+			channel.exchangeDeclare(exchangeName, "fanout", true);
+			// Declaramos una cola en el broker a travÈs del canal
+			// reciÈn creado llamada queueName 
+			// Indicamos que sea durable pero no exclusiva y que 
+			// no se borre autom·ticamente cuando nos desconectemos
+			boolean durable = true;
+			channel.queueDeclare(queueName, durable, false, false, null);
+			// E indicamos que queremos que la centralita exchangeName
+			// envÌe los mensajes a la cola reciÈn creada. Para ello creamos
+			// una uniÛn (binding) entre ellas (la clave de enrutado
+			// la ponemos vacÌa, porque se va a ignorar)	
+			channel.queueBind(queueName, exchangeName, "");
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		
-		DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-			// Insertar mensaje en la BBDD -> Aqui o en checker
-			
-			// Comrpobar si el mensaje va dirigido a su chat activo
-			
-			// Si no mandar como notificacion
+		DeliverCallback deliverCallback = (consumerTag, delivery) -> {			
 			
 			// Enviar mensaje a la sesion del usuario -> el username lo obtenermos por el nombre de la cola
+			JSONObject payload = new JSONObject(new String(delivery.getBody()));
+	        String message = payload.getString("msg");
+	        String type = payload.getString("type");
+	        String sender = payload.getString("sender");
+	        String dst = payload.getString("dst");
+	        // Comrpobar si el mensaje va dirigido a su chat activo
+			String id_room = dbAdministrator.getActiveRoom(queueName);
+			if(!dst.equals(id_room) && type.equals(typeMessage.CHAT.toString())){
+				// Si no mandar como notificacion
+				message = "Nuevo mensaje en " + dst;
+				type = typeMessage.NOTIFICATION.toString();
+				sender = "System";
+			}
+
+			WebSocketSession session = DBAdministrator.userUsernameMap.get(queueName);
+			if(!session.isOpen()){
+				channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+				channel.basicCancel(consumerTag);
+				channel.basicPublish("", queueName, MessageProperties.PERSISTENT_TEXT_PLAIN, delivery.getBody());	
+			}
+			else{
+		        sendMsgSession(message, queueName, type, sender, delivery.getEnvelope().getDeliveryTag());
+			}
 			
-	        String message = new String(delivery.getBody(), "UTF-8");
-	        System.out.println(" [x] Recibido '" + message + "'");
 	    };
-	    channel.basicConsume(queueName, true, deliverCallback, consumerTag -> { });
+	    try {
+			channel.basicConsume(queueName, false, deliverCallback, consumerTag -> { });
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
-	public void deleteQueue(String queueName){
-		
+	public void deleteQueue(String queueName) throws IOException{
+		channel.queueDelete(queueName);
 	}
 	
-	public void deleteExchange(String exchangeName){
-		
+	public void deleteExchange(String exchangeName) throws IOException{
+		channel.exchangeDelete(exchangeName);
+	}
+
+	public void unbindQueue(String queueName, String exchangeName) throws IOException{
+		channel.queueUnbind(queueName, exchangeName, "");
 	}
 	
-	public void unBindQueue(String queueName, String exchangeName){
-		
-	}
-	
-	public void sendMsg(String exchangeName, String msg) throws IOException{
+	public void sendMsg(String exchangeName, String msg, String sender, String type, DBAdministrator dbAdministrator) throws IOException{
+		JSONObject json = new JSONObject();
+		json.put("msg", msg);
+		json.put("type", type);
+		json.put("sender", sender);
+		json.put("dst", exchangeName);
 		// Publicamos el mensaje en la centralita EXCHANGE_NAME declarada
 		// antes. La clave de enrutado la dejamos vac√≠a (la va a ignorar), 
 		// y no indicamos propiedades para el mensaje (por ejemplo,
 		// el mensaje no ser√° durable)
-		channel.basicPublish(exchangeName, "", MessageProperties.PERSISTENT_TEXT_PLAIN, msg.getBytes());				
-		System.out.println(" [x] Enviado '" + msg + "'");
+		channel.basicPublish(exchangeName, "", MessageProperties.PERSISTENT_TEXT_PLAIN, json.toString().getBytes());		
+		
+		// Guardar mensaje en la base de datos
+		dbAdministrator.insertMsg(sender, exchangeName, (new Date()).getTime(), msg, type);
 	}
 	
+	// Se utiliza para enviar notificaciones al usuario
+	// Las notificaciones no se almacenan en la BD
+	public void sendMsgQueue(String queueName, String msg, String type) throws IOException{
+		// Publicamos el mensaje en la centralita EXCHANGE_NAME declarada
+		// antes. La clave de enrutado la dejamos vac√≠a (la va a ignorar), 
+		// y no indicamos propiedades para el mensaje (por ejemplo,
+		// el mensaje no ser√° durable)
+		JSONObject json = new JSONObject();
+		json.put("msg", msg);
+		json.put("type", type);
+		json.put("sender", "System");
+		json.put("dst", queueName);
+		channel.basicPublish("", queueName, MessageProperties.PERSISTENT_TEXT_PLAIN, json.toString().getBytes());			
+
+	}
+	
+	public void sendMsgSession(String msg, String username, String type, String sender, long tag){
+		Date date= new Date();
+		String timestamp = new SimpleDateFormat("HH:mm").format(date);	
+		JSONObject message = new JSONObject();
+		message.put("type", type);
+		message.put("content", "<b>" + sender + "</b>: " + msg + " (" + timestamp + ")");
+		TextMessage textMmessage = new TextMessage(message.toString());
+		try { 
+			WebSocketSession session = DBAdministrator.userUsernameMap.get(username);
+			if(session.isOpen()){
+				session.sendMessage(textMmessage);
+				channel.basicAck(tag, false);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 	
 }
 

@@ -20,7 +20,7 @@ function connect(event) {
 	if (name) {
 		var message = {
 			content : name,
-			type : 'verify'
+			type : 'VERIFY'
 		};
 		sendMessage(JSON.stringify(message));
 		messageInput.value = "";
@@ -48,16 +48,16 @@ socket.onmessage = function (event) {
         
 		var message = JSON.parse(`${event.data}`);
 		
-		if (message.type === 'notification') {
+		if (message.type === 'NOTIFICATION') {
 			addCommandToWindow(message.content);
 		}
-		else if (message.type === 'broadcast') {
+		else if (message.type === 'BROADCAST') {
 			addCommandToWindow(message.content);
 		}
-		else if(message.type === 'chat'){		
+		else if(message.type === 'CHAT'){		
 			addMessageToWindow(message.content);
 		}
-		else if(message.type === 'kick'){
+		else if(message.type === 'KICK'){
 			var msg = {
 				content : "",
 				type : 'kick'
@@ -65,7 +65,7 @@ socket.onmessage = function (event) {
 			sendMessage(JSON.stringify(msg));
 			addMessageToWindow("Has sido expulsado de la sala");
 		}
-		else if(message.type === 'clean'){
+		else if(message.type === 'CLEAN'){
 			cleanMessageWindow();
 		}
 	}
@@ -78,7 +78,7 @@ sendCommandButton.onclick = function(event){
 	if (messageContent) {
 		var command = {
 			content : messageContent,
-			type : 'command'
+			type : 'COMMAND'
 		};
 		sendMessage(JSON.stringify(command));
 		addCommandToWindow(messageContent);
@@ -92,7 +92,7 @@ sendButton.onclick = function (event) {
 	if (messageContent) {
 		var message = {
 			content : messageContent,
-			type : 'chat'
+			type : 'CHAT'
 		};
 		sendMessage(JSON.stringify(message));
 		messageInput.value = "";

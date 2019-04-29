@@ -39,7 +39,6 @@ public class FileController {
     @GetMapping("/downloadFile/{fileId}")
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileId) {
 
-    	/* TODO comprobar que el usuario tenga permisos */
         // Load file from database
         DBFile dbFile = DBFileStorageService.getFile(fileId);
     	return ResponseEntity.ok()

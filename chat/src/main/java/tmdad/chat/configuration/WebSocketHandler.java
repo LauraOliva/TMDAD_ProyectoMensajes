@@ -11,169 +11,164 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import tmdad.chat.bbdd.DBAdministrator;
-import tmdad.chat.controller.ChatRoomController;
 import tmdad.chat.controller.CommandChecker;
-import tmdad.chat.controller.UserController;
+import tmdad.chat.controller.CommandChecker.typeMessage;
+import tmdad.chat.controller.RabbitMQAdapter;
 
 @Component
 public class WebSocketHandler extends TextWebSocketHandler {
 
 	CommandChecker msgParser = new CommandChecker();
-	UserController userController = new UserController();
-	ChatRoomController chatController = new ChatRoomController();
 	@Autowired DBAdministrator dbAdministrator;
+	@Autowired RabbitMQAdapter rabbitAdapter;
+	
 	
 	@Override
 	protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
 		// Obtener nombre de usuario
-		String sender = UserController.getUsername(session);
+		String sender = DBAdministrator.getUsername(session);
 
-	    
 	    // Leer el json para saber que tipo de mensaje es
 	    JSONObject payload = new JSONObject(message.getPayload());
 	  	ArrayList<String> status = msgParser.checkMessage(session, message, sender, dbAdministrator);
-    	TextMessage msg;
     	String id_room;
-		String id_user;
-				
+		String id_user;				
 
 		CommandChecker.reply r = CommandChecker.reply.valueOf(status.get(0).toUpperCase());
     	switch(r){
     		case HELPOK:
-    			userController.sendNotificationToUser(status.get(1), session, "notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, status.get(1), typeMessage.NOTIFICATION.toString());
     			break;
     		case NOTROOT:
-    			userController.sendNotificationToUser("No eres administrador", session, "notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "No eres administrador", typeMessage.NOTIFICATION.toString());
     			break;
     		case BROADCASTOK:
-    			userController.sendNotificationToUser("Notification enviada", session, "notification", dbAdministrator);
-    			chatController.broadcast(status.get(1), dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "Notification enviada", typeMessage.NOTIFICATION.toString());
+    			rabbitAdapter.sendMsg(RabbitMQAdapter.ROOT_EXCHANGE, status.get(1), "root", typeMessage.BROADCAST.toString(), dbAdministrator);
     			break;
     		case WRONGCOMMAND:
     			// Notificar al usuario
-    			userController.sendNotificationToUser("Error en el número de parámetros: usa HELP", session, "notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "Error en el número de parámetros: usa HELP", typeMessage.NOTIFICATION.toString());
+    			break;
+    		case ROOMSOK:
+    			rabbitAdapter.sendMsgQueue(sender, status.get(1), typeMessage.NOTIFICATION.toString());    			
+    			break;
+    		case USERSROOMOK:
+    			rabbitAdapter.sendMsgQueue(sender, status.get(1), typeMessage.NOTIFICATION.toString());  
     			break;
     		case CHATOK:
     			id_room = status.get(1);
-    			msg = new TextMessage( payload.getString("content").trim());
-    			chatController.sendMessageRoom(id_room, msg, sender, "chat", dbAdministrator);
+    			rabbitAdapter.sendMsg(id_room, payload.getString("content").trim(), sender, typeMessage.CHAT.toString(), dbAdministrator);
     			break;
-    		case VERIFYACTIVE:
+    		case VERIFYOK:
     			id_user = status.get(1);
-    			id_room = status.get(2);
-    			userController.getNotificationUser(session, dbAdministrator);
-    			chatController.getMsgRoom(session, id_room, dbAdministrator);
-    			userController.sendNotificationToUser("Username: " + id_user + ", ChatRoom: " + id_room, session, "notification", dbAdministrator);
-    			break;
-    		case VERIFYNOTACTIVE:
-    			id_user = status.get(1);
-    			userController.getNotificationUser(session, dbAdministrator);
-    			userController.sendNotificationToUser("Username: " + id_user + ", ChatRoom: null", session, "notification", dbAdministrator);
+    			rabbitAdapter.bindQueue(id_user, RabbitMQAdapter.ROOT_EXCHANGE, dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(id_user, "Username: " + id_user + ", ChatRoom: null", typeMessage.NOTIFICATION.toString());
     			break;
     		case KICKOK:
     			id_room = status.get(1);
-    			userController.sendNotificationToUser("Te han expulsado de la sala " + id_room, session, "notification", dbAdministrator);
-    			userController.sendNotificationToUser("", session, "clean", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "Te han expulsado de la sala " + id_room, typeMessage.NOTIFICATION.toString());
+    			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
+    			rabbitAdapter.unbindQueue(sender, id_room);	
     	    	break;
     		case CREATEOK:
     			id_room = status.get(1);
-    			userController.sendNotificationToUser("Sala " + id_room + " creada con éxito", session, "notification", dbAdministrator);
-    			userController.sendNotificationToUser("Te has unido a la sala " + id_room, session, "notification", dbAdministrator);
-    	    	msg = new TextMessage( sender + " ha creado la sala " + id_room);
-    	    	chatController.sendMessageRoom(id_room, msg, sender, "chat", dbAdministrator);
+    			rabbitAdapter.bindQueue(sender, id_room, dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
+    			rabbitAdapter.sendMsgQueue(sender, "Sala " + id_room + " creada con éxito", typeMessage.NOTIFICATION.toString());
+    			rabbitAdapter.sendMsg(id_room, sender + " ha creado la sala " + id_room, sender, typeMessage.CHAT.toString(), dbAdministrator);
+    			rabbitAdapter.sendMsg(id_room, "se ha unido a la sala", sender, typeMessage.CHAT.toString(), dbAdministrator);
     	    	break;
     		case CHATUSERMSG:
     			id_room = status.get(1);
-    			chatController.getMsgRoom(session, id_room, dbAdministrator);
     			break;
     		case CHATUSERCREATE:
     			id_room = status.get(1);
     			id_user = status.get(2);
-    	    	msg = new TextMessage("Conversación entre " + sender + " y " + id_user + " iniciada");
-    			chatController.sendMessageRoom(id_room, msg, sender, "chat", dbAdministrator);
+    			rabbitAdapter.bindQueue(sender, id_room, dbAdministrator);
+    			rabbitAdapter.bindQueue(id_user, id_room, dbAdministrator);
+    			rabbitAdapter.sendMsg(id_room, "Conversación entre " + sender + " y " + id_user + " iniciada", sender, typeMessage.CHAT.toString(), dbAdministrator);
+    			
     			break;
     		case JOINOK:
     			id_room = status.get(1);
-    	    	msg = new TextMessage( "se ha unido a la sala " + id_room);
-    			userController.sendNotificationToUser("", session, "clean", dbAdministrator);
-    			userController.sendNotificationToUser("Te has unido a la sala " + id_room, session, "notification", dbAdministrator);
-    	    	chatController.sendMessageRoom(id_room, msg, sender, "chat", dbAdministrator);
+    			rabbitAdapter.bindQueue(sender, id_room, dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "Te has unido a la sala", typeMessage.NOTIFICATION.toString());
+    			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
+    			rabbitAdapter.sendMsg(id_room, "se ha unido a la sala", sender, typeMessage.CHAT.toString(), dbAdministrator);
     	    	break;
     		case LEAVEOK:
     			id_room = status.get(1);
-    	    	msg = new TextMessage( "ha abandonado la sala");
-    	    	chatController.sendMessageRoom(id_room, msg, sender, "chat", dbAdministrator);	
-    			userController.sendNotificationToUser("Has abandonado la sala " + id_room, session, "notification", dbAdministrator);
-    			userController.sendNotificationToUser("", session, "clean", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "Has abandonado la sala " + id_room, typeMessage.NOTIFICATION.toString());
+    			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
+    			rabbitAdapter.unbindQueue(sender, id_room);	
+    			rabbitAdapter.sendMsg(id_room, "ha abandonado la sala", sender, typeMessage.CHAT.toString(), dbAdministrator);
     	    	break;
     		case CLOSEOK:
-    			userController.sendNotificationToUser("", session, "clean", dbAdministrator);
+    			id_room = status.get(1);
+    			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
     			break;
     		case OPENOK:
     			id_room = status.get(1);
-    			userController.sendNotificationToUser("", session, "clean", dbAdministrator);
-    			chatController.getMsgRoom(session, id_room, dbAdministrator);
+    			rabbitAdapter.bindQueue(sender, id_room, dbAdministrator);
     			break;
     		case NOTINVITED:
     			id_room = status.get(1);
-    			userController.sendNotificationToUser("No te puedes unir a la sala " + id_room + ". Necesitas invitación.", session, "notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "No te puedes unir a la sala " + id_room + ". Necesitas invitación." + id_room, typeMessage.NOTIFICATION.toString());
     			break;
     		case INVITEOK:
 				id_user = status.get(1);
     			id_room = status.get(2);
-    			userController.sendNotificationToUser("Has invitado al usuario " + id_user + " a unirse a la sala " + id_room, session, "notification", dbAdministrator);
-    	    	msg = new TextMessage("Se ha invitado a unirse a la sala a " + id_user);
-    			chatController.sendMessageRoom(id_room, msg, sender, "chat", dbAdministrator);
-    			userController.sendNotificationToUser("Has sido invitado a la sala " + id_room + " (JOINROOM " + id_room + " para aceptar)", userController.getSession(id_user), 
-    					"notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "Has invitado al usuario " + id_user + " a unirse a la sala " + id_room, typeMessage.NOTIFICATION.toString());
+    	    	rabbitAdapter.sendMsg(id_room, "Se ha invitado a unirse a la sala a " + id_user, sender, typeMessage.CHAT.toString(), dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(id_user, "Has sido invitado a la sala " + id_room + " (JOINROOM " + id_room + " para aceptar)", typeMessage.NOTIFICATION.toString());
     			break;
     		case DELETEOK:
     			id_room = status.get(1);
-    			userController.sendNotificationToUser("Has eliminado la sala " + id_room, userController.getSession(sender), "notification", dbAdministrator);
-    			userController.sendNotificationToUser("", session, "clean", dbAdministrator);
-				// Avisar al resto de usuarios de que su activeroom es null
-    	    	chatController.sendMessageRoom(id_room, new TextMessage(""), sender, "kick", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "Has eliminado la sala " + id_room, typeMessage.NOTIFICATION.toString());
+    			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
+				rabbitAdapter.sendMsg(id_room, "", sender, typeMessage.KICK.toString(), dbAdministrator);
+    			rabbitAdapter.deleteExchange(id_room);
     	    	break;
     		case KICKROK:
 				id_user = status.get(1);
     			id_room = status.get(2);
-    			WebSocketSession userSession = UserController.userUsernameMap.get(id_user);
-    			userController.sendNotificationToUser("Has sido expulsado de la sala " + id_room, userSession, "notification", dbAdministrator);
-				// Notificar al resto de usuarios de la sala
-    	    	msg = new TextMessage( "(Administrador) ha expulsado de la sala " + id_room + " a " + id_user);
-    	    	chatController.sendMessageRoom(id_room, msg, sender, "chat", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(id_user, "Has sido expulsado de la sala " + id_room, typeMessage.NOTIFICATION.toString());
+				rabbitAdapter.sendMsgQueue(id_user, "", typeMessage.CLEAN.toString());
+    			rabbitAdapter.unbindQueue(id_user, id_room);
+    			rabbitAdapter.sendMsg(id_room, "(Administrador) ha expulsado de la sala " + id_room + " a " + id_user, sender, typeMessage.CHAT.toString(), dbAdministrator);
+    			
     	    	break;
     		case ROOMEXISTS:
     			id_room = status.get(1);
-    			userController.sendNotificationToUser("Ya existe la sala " + id_room, session, "notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "Ya existe la sala " + id_room, typeMessage.NOTIFICATION.toString());
     			break;
     		case ROOMNOTEXISTS:
     			id_room = status.get(1);
-    			userController.sendNotificationToUser("No existe la sala " + id_room, session, "notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "No existe la sala " + id_room, typeMessage.NOTIFICATION.toString());
     			break;
     		case NOTADMIN:
     			id_room = status.get(1);
-    			userController.sendNotificationToUser("No eres el administrador de la sala " + id_room, session, "notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "No eres el administrador de la sala " + id_room, typeMessage.NOTIFICATION.toString());
     			break;
     		case USERNOTROOM:
 				id_user = status.get(1);
     			id_room = status.get(2);
-    			userController.sendNotificationToUser("El usuario " + id_user + " no pertenece a la sala " + id_room, session, "notification", dbAdministrator);	
+    			rabbitAdapter.sendMsgQueue(sender, "El usuario " + id_user + " no pertenece a la sala " + id_room, typeMessage.NOTIFICATION.toString());	
     			break;
     		case USERNOTEXISTS:
     			id_user = status.get(1);
-    			userController.sendNotificationToUser("El usuario " + id_user + " no existe", session, "notification", dbAdministrator);	
+    			rabbitAdapter.sendMsgQueue(sender, "El usuario " + id_user + " no existe", typeMessage.NOTIFICATION.toString());
     			break;
     		case NOACTIVEROOM:
-    			userController.sendNotificationToUser("No tienes ninguna sala activa", session, "notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "No tienes ninguna sala activa", typeMessage.NOTIFICATION.toString());
     			break;
     		case USERINROOM:
 				id_user = status.get(1);
-    			userController.sendNotificationToUser("El usuario " + id_user + " ya esta en la sala", session, "notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "El usuario " + id_user + " ya esta en la sala", typeMessage.NOTIFICATION.toString());
     			break;
     		case NOTKNOWN:
-    			// Notificar al usuario
-    			userController.sendNotificationToUser("Comando desconocido", session, "notification", dbAdministrator);
+    			rabbitAdapter.sendMsgQueue(sender, "Comando desconocido", typeMessage.NOTIFICATION.toString());
     			break;
     		default:
     			break;
