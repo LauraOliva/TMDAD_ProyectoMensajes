@@ -2,6 +2,7 @@ package tmdad.chat.controller;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.TimeoutException;
 
@@ -126,7 +127,14 @@ public class RabbitMQAdapter {
 		channel.queueUnbind(queueName, exchangeName, "");
 	}
 	
-	public void sendMsg(String exchangeName, String msg, String sender, String type, DBAdministrator dbAdministrator) throws IOException{
+	public void sendMsg(String exchangeName, String msg, String sender, String type, DBAdministrator dbAdministrator, CensureAdapter censureAdapter) throws IOException{
+		
+		// Censura
+		ArrayList<String> censure = censureAdapter.filterMsg(msg, sender);
+		if(Boolean.parseBoolean(censure.get(0))){
+			msg = censure.get(1);
+		}
+		
 		JSONObject json = new JSONObject();
 		json.put("msg", msg);
 		json.put("type", type);

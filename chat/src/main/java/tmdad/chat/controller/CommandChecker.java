@@ -12,12 +12,13 @@ import tmdad.chat.bbdd.DBAdministrator;
 
 public class CommandChecker {
 	public static enum commands { HELP, CREATEROOM, CHATUSER, JOINROOM, LEAVEROOM, 
-		CLOSEROOM, OPENROOM, INVITEROOM, DELETEROOM, KICKROOM, BROADCAST, GETROOMS, GETUSERSROOM }
+		CLOSEROOM, OPENROOM, INVITEROOM, DELETEROOM, KICKROOM, BROADCAST, GETROOMS, GETUSERSROOM,
+		ADDCENSURE, REMOVECENSURE, GETCENSURE}
 	public static enum typeMessage { CHAT, VERIFY, KICK, COMMAND, NOTIFICATION, BROADCAST, CLEAN}
 	public static enum reply {HELPOK, CHATOK, VERIFYOK, KICKOK, NOTKNOWN, WRONGCOMMAND, NOTADMIN,
 		ROOMNOTEXISTS, ROOMEXISTS, USERINROOM, CREATEOK, CHATUSERMSG, CHATUSERCREATE, USERNOTEXISTS, JOINOK, 
 		NOTINVITED, LEAVEOK, CLOSEOK, OPENOK, INVITEOK, DELETEOK, KICKROK, USERNOTROOM, NOACTIVEROOM, NOTROOT, 
-		BROADCASTOK, ROOMSOK, USERSROOMOK}
+		BROADCASTOK, ROOMSOK, USERSROOMOK, ADDCENSUREOK, REMCENSUREOK, GETCENSUREOK}
 	
 	public void getMsgRoom(WebSocketSession session, String id_room, DBAdministrator dbAdministrator){
 		
@@ -79,7 +80,8 @@ public class CommandChecker {
 			if(cmd.equals(commands.KICKROOM) || cmd.equals(commands.INVITEROOM)){
 				help += "<div><b>" + cmd.toString() + "</b> id_room id_user </div>";
 			}
-			else if(cmd.equals(commands.CLOSEROOM) || cmd.equals(commands.HELP) || cmd.equals(commands.GETROOMS)){
+			else if(cmd.equals(commands.CLOSEROOM) || cmd.equals(commands.HELP) || cmd.equals(commands.GETROOMS)
+					|| cmd.equals(commands.GETCENSURE)){
 				help += "<div><b>" + cmd.toString() + "</b> </div>";
 			}
 			else if(cmd.equals(commands.CHATUSER)){
@@ -87,6 +89,9 @@ public class CommandChecker {
 			}
 			else if(cmd.equals(commands.BROADCAST)){
 				help += "<div><b>" + cmd.toString() + "</b> msg </div>";
+			}
+			else if(cmd.equals(commands.ADDCENSURE) || cmd.equals(commands.REMOVECENSURE)){
+				help += "<div><b>" + cmd.toString() + "</b> word </div>";
 			}
 			else{
 				help += "<div><b>" + cmd.toString() + "</b> id_room </div>";
@@ -112,9 +117,10 @@ public class CommandChecker {
 	private boolean checkLengthCommand(String[] command, commands cmd){
 		return (command.length != 2 && (!cmd.equals(commands.KICKROOM) && !cmd.equals(commands.INVITEROOM) 
     			&& !cmd.equals(commands.CLOSEROOM) && !cmd.equals(commands.HELP) && !cmd.equals(commands.BROADCAST) 
-    			&& !cmd.equals(commands.GETROOMS))
+    			&& !cmd.equals(commands.GETROOMS) && !cmd.equals(commands.GETCENSURE))
     			|| (command.length != 3 && (cmd.equals(commands.KICKROOM) || cmd.equals(commands.INVITEROOM)))
-    			|| (command.length != 1 && (cmd.equals(commands.CLOSEROOM) || cmd.equals(commands.HELP) || cmd.equals(commands.GETROOMS))
+    			|| (command.length != 1 && (cmd.equals(commands.CLOSEROOM) || cmd.equals(commands.HELP) || cmd.equals(commands.GETROOMS)
+    					|| cmd.equals(commands.GETCENSURE))
     			|| (command.length < 2 && cmd.equals(commands.BROADCAST))));
 	}
 	
@@ -131,6 +137,11 @@ public class CommandChecker {
 	
 	private boolean checkInvitation(commands cmd, DBAdministrator dbAdministrator, String sender, String id_room){
 		return ((cmd.equals(commands.JOINROOM) || cmd.equals(commands.INVITEROOM)) && dbAdministrator.isUserInChat(sender, id_room));
+	}
+	
+	private boolean checkRoot(commands cmd, DBAdministrator dbAdministrator, String sender){
+		return ((cmd.equals(commands.BROADCAST) || cmd.equals(commands.ADDCENSURE) || cmd.equals(commands.REMOVECENSURE)
+				|| cmd.equals(commands.GETCENSURE)) && !dbAdministrator.isRoot(sender));
 	}
 	
 	private ArrayList<String> verify(WebSocketSession session, String username, DBAdministrator dbAdministrator){
@@ -167,6 +178,7 @@ public class CommandChecker {
 				result.add(reply.CHATUSERMSG.toString());
 				result.add(possible_name_2);
 				id_active_room = possible_name_2;
+				getMsgRoom(session, possible_name_2, dbAdministrator);
 			}
 			// Si no -> crear sala 
 			else{
@@ -263,7 +275,11 @@ public class CommandChecker {
 				else result.add(sender);
 				return result;
 	    	}
-	    		
+	    	
+	    	if(checkRoot(cmd, dbAdministrator, sender)){
+	    		result.add(reply.NOTROOT.toString());
+	    		return result;
+	    	}
 	    	
 	    	switch(cmd){
 	    		case HELP:
@@ -282,14 +298,9 @@ public class CommandChecker {
 	    			result.add(users);
 	    			break;
 	    		case BROADCAST:
-	    			if(dbAdministrator.isRoot(sender)){
-	    				result.add(reply.BROADCASTOK.toString());
-	    				String [] aux = content.split(" ", 2);
-	    				result.add(aux[1]);
-	    			}
-	    			else{
-	    				result.add(reply.NOTROOT.toString());
-	    			}
+    				result.add(reply.BROADCASTOK.toString());
+    				String [] aux = content.split(" ", 2);
+    				result.add(aux[1]);
 	    			break;
 	    		case CREATEROOM:
 		    		result = checkCreate(command[1], dbAdministrator, sender);
@@ -365,6 +376,17 @@ public class CommandChecker {
 					result.add(id_user);
     				result.add(id_room);
 		    		break;
+	    		case ADDCENSURE:
+	    			result.add(reply.ADDCENSUREOK.toString());
+	    			result.add(command[1]);
+	    			break;
+	    		case REMOVECENSURE:
+	    			result.add(reply.REMCENSUREOK.toString());
+	    			result.add(command[1]);
+	    			break;
+	    		case GETCENSURE:
+	    			result.add(reply.GETCENSUREOK.toString());
+	    			break;
 	    		default:
 	    			break;
 	    	}
