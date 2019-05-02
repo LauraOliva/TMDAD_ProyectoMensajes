@@ -1,4 +1,4 @@
-package tmdad.chat.controller;
+package com.tmdad.ficheros;
 
 import java.io.IOException;
 
@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import tmdad.chat.bbdd.DBFileRepository;
-import tmdad.chat.model.DBFile;
+import com.tmdad.ficheros.model.DBFile;
+import com.tmdad.ficheros.model.DBFileRepository;
 
 @Service
 public class DBFileStorageService {

@@ -146,20 +146,24 @@ function uploadFile(file) {
     formData.append("file", file);
 
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", "/uploadFile");
+    url = 'http://localhost:8000/uploadFile'
+    xhr.open("POST", url, true);
 
-    xhr.onload = function() {
+    xhr.onreadystatechange  = function() {
         console.log(xhr.responseText);
         var response = xhr.responseText;
-        if(xhr.status == 200) {
+        if(this.readyState === XMLHttpRequest.DONE && this.status === 200) {
 
             var res = "<a href='" + response + "' target='_blank'>" + "Descargar fichero" + "</a>";
 
             var message = {
 				content : res,
-				type : 'chat'
+				type : 'CHAT'
 			};
 			sendMessage(JSON.stringify(message));
+        }
+        else{
+        	addCommandToWindow("No se ha podido enviar el fichero")
         }
     }
 

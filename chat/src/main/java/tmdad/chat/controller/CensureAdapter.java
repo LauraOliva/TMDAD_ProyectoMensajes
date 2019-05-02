@@ -26,7 +26,6 @@ public class CensureAdapter {
 		con.setRequestMethod("GET");
 		con.setRequestProperty("User-Agent", USER_AGENT);
 		int responseCode = con.getResponseCode();
-		System.out.println("GET Response Code :: " + responseCode);
 		if (responseCode == HttpURLConnection.HTTP_OK) { // success
 			BufferedReader in = new BufferedReader(new InputStreamReader(
 					con.getInputStream()));
@@ -47,7 +46,6 @@ public class CensureAdapter {
 	
 	public String doPost(String url, String params, String failure) throws IOException{
 		URL obj = new URL(url);
-		System.out.println(obj.toString());
 		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
 		con.setRequestMethod("POST");
 		con.setRequestProperty("User-Agent", USER_AGENT);
@@ -61,7 +59,6 @@ public class CensureAdapter {
 		// For POST only - END
 
 		int responseCode = con.getResponseCode();
-		System.out.println("POST Response Code :: " + responseCode);
 
 		if (responseCode == HttpURLConnection.HTTP_OK) { //success
 			BufferedReader in = new BufferedReader(new InputStreamReader(

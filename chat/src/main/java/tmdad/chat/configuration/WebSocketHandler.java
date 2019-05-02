@@ -36,6 +36,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     	String id_room;
 		String id_user;	
 		String msg;
+		ArrayList<String> censure = new ArrayList<>();
 
 		CommandChecker.reply r = CommandChecker.reply.valueOf(status.get(0).toUpperCase());
     	switch(r){
@@ -47,8 +48,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			break;
     		case BROADCASTOK:
     			rabbitAdapter.sendMsgQueue(sender, "Notification enviada", typeMessage.NOTIFICATION.toString());
-    			rabbitAdapter.sendMsg(RabbitMQAdapter.ROOT_EXCHANGE, status.get(1), "root", typeMessage.BROADCAST.toString(), dbAdministrator,
-    					censureAdapter);
+    			// Censura
+    			msg = status.get(1);
+    			censure = censureAdapter.filterMsg(msg, sender);
+    			if(Boolean.parseBoolean(censure.get(0))) msg = censure.get(1);
+    			rabbitAdapter.sendMsg(RabbitMQAdapter.ROOT_EXCHANGE, msg, "root", typeMessage.BROADCAST.toString(), dbAdministrator);
     			break;
     		case WRONGCOMMAND:
     			// Notificar al usuario
@@ -62,8 +66,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			break;
     		case CHATOK:
     			id_room = status.get(1);
-    			rabbitAdapter.sendMsg(id_room, payload.getString("content").trim(), sender, typeMessage.CHAT.toString(), dbAdministrator,
-    					censureAdapter);
+    			// Censura
+    			msg = payload.getString("content").trim();
+    			censure = censureAdapter.filterMsg(msg, sender);
+    			if(Boolean.parseBoolean(censure.get(0))) msg = censure.get(1);
+    			rabbitAdapter.sendMsg(id_room, msg, sender, typeMessage.CHAT.toString(), dbAdministrator);
     			break;
     		case VERIFYOK:
     			id_user = status.get(1);
@@ -82,8 +89,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
     			rabbitAdapter.sendMsgQueue(sender, "Sala " + id_room + " creada con éxito", typeMessage.NOTIFICATION.toString());
     			rabbitAdapter.sendMsg(id_room, sender + " ha creado la sala " + id_room, sender, typeMessage.CHAT.toString(), 
-    					dbAdministrator, censureAdapter);
-    			rabbitAdapter.sendMsg(id_room, "se ha unido a la sala", sender, typeMessage.CHAT.toString(), dbAdministrator, censureAdapter);
+    					dbAdministrator);
+    			rabbitAdapter.sendMsg(id_room, "se ha unido a la sala", sender, typeMessage.CHAT.toString(), dbAdministrator);
     	    	break;
     		case CHATUSERMSG:
     			id_room = status.get(1);
@@ -94,7 +101,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			rabbitAdapter.bindQueue(sender, id_room, dbAdministrator);
     			rabbitAdapter.bindQueue(id_user, id_room, dbAdministrator);
     			rabbitAdapter.sendMsg(id_room, "Conversación entre " + sender + " y " + id_user + " iniciada", sender, 
-    					typeMessage.CHAT.toString(), dbAdministrator, censureAdapter);
+    					typeMessage.CHAT.toString(), dbAdministrator);
     			
     			break;
     		case JOINOK:
@@ -102,14 +109,14 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			rabbitAdapter.bindQueue(sender, id_room, dbAdministrator);
     			rabbitAdapter.sendMsgQueue(sender, "Te has unido a la sala", typeMessage.NOTIFICATION.toString());
     			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
-    			rabbitAdapter.sendMsg(id_room, "se ha unido a la sala", sender, typeMessage.CHAT.toString(), dbAdministrator, censureAdapter);
+    			rabbitAdapter.sendMsg(id_room, "se ha unido a la sala", sender, typeMessage.CHAT.toString(), dbAdministrator);
     	    	break;
     		case LEAVEOK:
     			id_room = status.get(1);
     			rabbitAdapter.sendMsgQueue(sender, "Has abandonado la sala " + id_room, typeMessage.NOTIFICATION.toString());
     			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
     			rabbitAdapter.unbindQueue(sender, id_room);	
-    			rabbitAdapter.sendMsg(id_room, "ha abandonado la sala", sender, typeMessage.CHAT.toString(), dbAdministrator, censureAdapter);
+    			rabbitAdapter.sendMsg(id_room, "ha abandonado la sala", sender, typeMessage.CHAT.toString(), dbAdministrator);
     	    	break;
     		case CLOSEOK:
     			id_room = status.get(1);
@@ -128,14 +135,14 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			id_room = status.get(2);
     			rabbitAdapter.sendMsgQueue(sender, "Has invitado al usuario " + id_user + " a unirse a la sala " + id_room, typeMessage.NOTIFICATION.toString());
     	    	rabbitAdapter.sendMsg(id_room, "Se ha invitado a unirse a la sala a " + id_user, sender, typeMessage.CHAT.toString(), 
-    	    			dbAdministrator, censureAdapter);
+    	    			dbAdministrator);
     			rabbitAdapter.sendMsgQueue(id_user, "Has sido invitado a la sala " + id_room + " (JOINROOM " + id_room + " para aceptar)", typeMessage.NOTIFICATION.toString());
     			break;
     		case DELETEOK:
     			id_room = status.get(1);
     			rabbitAdapter.sendMsgQueue(sender, "Has eliminado la sala " + id_room, typeMessage.NOTIFICATION.toString());
     			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
-				rabbitAdapter.sendMsg(id_room, "", sender, typeMessage.KICK.toString(), dbAdministrator, censureAdapter);
+				rabbitAdapter.sendMsg(id_room, "", sender, typeMessage.KICK.toString(), dbAdministrator);
     			rabbitAdapter.deleteExchange(id_room);
     	    	break;
     		case KICKROK:
@@ -145,7 +152,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 				rabbitAdapter.sendMsgQueue(id_user, "", typeMessage.CLEAN.toString());
     			rabbitAdapter.unbindQueue(id_user, id_room);
     			rabbitAdapter.sendMsg(id_room, "(Administrador) ha expulsado de la sala " + id_room + " a " + id_user, sender, 
-    					typeMessage.CHAT.toString(), dbAdministrator, censureAdapter);
+    					typeMessage.CHAT.toString(), dbAdministrator);
     	    	break;
     		case ADDCENSUREOK:
     			msg = censureAdapter.addWord(status.get(1));
