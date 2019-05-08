@@ -8,20 +8,27 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 public class CensureAdapter {
 
 	private static final String USER_AGENT = "Mozilla/5.0";
-	private final String URL = "http://localhost:9000";
-	private final String URL_ADD = "/addCensure";
-	private final String URL_REMOVE = "/removeCensure";
-	private final String URL_GET = "/censureWords";
-	private final String URL_FILTER = "/censureFilter";
+	@Value("${censura.url}")
+	private String URL;
+	@Value("${censura.url.add}")
+	private String URL_ADD;
+	@Value("${censura.url.remove}")
+	private String URL_REMOVE;
+	@Value("${censura.url.get}")
+	private String URL_GET;
+	@Value("${censura.url.filter}")
+	private String URL_FILTER;
 	
 	public String doGet(String url, String failure) throws IOException{
 		URL obj = new URL(url);
+		System.err.println(url);
 		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
 		con.setRequestMethod("GET");
 		con.setRequestProperty("User-Agent", USER_AGENT);
@@ -81,6 +88,7 @@ public class CensureAdapter {
 	
 	public String addWord(String word){
 		String params = "word=" + word;
+		System.err.println(URL+URL_ADD);
 		try {
 			return doPost(URL+URL_ADD, params, "No se ha podido añadir la palabra " + word);
 		} catch (IOException e) {

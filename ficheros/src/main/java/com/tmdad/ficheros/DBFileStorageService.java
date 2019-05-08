@@ -18,9 +18,6 @@ public class DBFileStorageService {
 
     public DBFile storeFile(MultipartFile file) {
         // Normalize file name
-    	/* TODO avisar al usuario en caso de error */
-    	/* TODO implementar excepciones para los casos comentados y para 
-    	 * el caso en el que el fichero exceda 1MB*/
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
 
         try {

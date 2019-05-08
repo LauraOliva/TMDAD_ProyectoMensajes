@@ -1,13 +1,24 @@
 plugins {
 	id 'org.springframework.boot' version '2.1.4.RELEASE'
 	id 'java'
+	id 'application'
+}
+
+application {
+    mainClassName = 'com.tmdad.censura.CensuraApplication'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.tmdad.censura.CensuraApplication'
+    }
 }
 
 apply plugin: 'io.spring.dependency-management'
+apply plugin: 'java'
 
 group = 'com.tmdad'
-version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '1.8'
+
 
 repositories {
 	mavenCentral()

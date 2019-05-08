@@ -17,6 +17,7 @@ import com.rabbitmq.client.DeliverCallback;
 import com.rabbitmq.client.MessageProperties;
 
 import tmdad.chat.bbdd.DBAdministrator;
+import tmdad.chat.configuration.WebSocketHandler;
 import tmdad.chat.controller.CommandChecker.typeMessage;
 
 
@@ -96,10 +97,18 @@ public class RabbitMQAdapter {
 			}
 
 			WebSocketSession session = DBAdministrator.userUsernameMap.get(queueName);
-			if(!session.isOpen()){
-				channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
-				channel.basicCancel(consumerTag);
-				channel.basicPublish("", queueName, MessageProperties.PERSISTENT_TEXT_PLAIN, delivery.getBody());	
+			if(session == null || !session.isOpen()){
+				//channel.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+				try{
+					channel.basicCancel(consumerTag);
+				}catch (IOException e1) {
+					System.err.println("Unknown consumer tag");
+				}
+				System.err.println(queueName);
+				System.err.println(dst);
+				if(dst != null){
+					channel.basicPublish("", dst, MessageProperties.PERSISTENT_TEXT_PLAIN, delivery.getBody());
+				}
 			}
 			else{
 		        sendMsgSession(message, queueName, type, sender, delivery.getEnvelope().getDeliveryTag());
@@ -107,7 +116,7 @@ public class RabbitMQAdapter {
 			
 	    };
 	    try {
-			channel.basicConsume(queueName, false, deliverCallback, consumerTag -> { });
+			channel.basicConsume(queueName, true, deliverCallback, consumerTag -> { });
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -132,14 +141,19 @@ public class RabbitMQAdapter {
 		json.put("type", type);
 		json.put("sender", sender);
 		json.put("dst", exchangeName);
+		
+		
 		// Publicamos el mensaje en la centralita EXCHANGE_NAME declarada
 		// antes. La clave de enrutado la dejamos vacía (la va a ignorar), 
 		// y no indicamos propiedades para el mensaje (por ejemplo,
 		// el mensaje no será durable)
-		channel.basicPublish(exchangeName, "", MessageProperties.PERSISTENT_TEXT_PLAIN, json.toString().getBytes());		
+		System.err.println(exchangeName);
+		if(exchangeName != null){
+			channel.basicPublish(exchangeName, "", MessageProperties.PERSISTENT_TEXT_PLAIN, json.toString().getBytes());
+		}
 		
 		// Guardar mensaje en la base de datos
-		dbAdministrator.insertMsg(sender, exchangeName, (new Date()).getTime(), msg, type);
+		dbAdministrator.insertMsg(sender, exchangeName, (new Date()).getTime(), msg, type);		
 	}
 	
 	// Se utiliza para enviar notificaciones al usuario
@@ -154,7 +168,10 @@ public class RabbitMQAdapter {
 		json.put("type", type);
 		json.put("sender", "System");
 		json.put("dst", queueName);
-		channel.basicPublish("", queueName, MessageProperties.PERSISTENT_TEXT_PLAIN, json.toString().getBytes());			
+		System.err.println(queueName);
+		if(queueName != null){
+			channel.basicPublish("", queueName, MessageProperties.PERSISTENT_TEXT_PLAIN, json.toString().getBytes());
+		}
 
 	}
 	
@@ -165,15 +182,20 @@ public class RabbitMQAdapter {
 		message.put("type", type);
 		message.put("content", "<b>" + sender + "</b>: " + msg + " (" + timestamp + ")");
 		TextMessage textMmessage = new TextMessage(message.toString());
-		try { 
+		//try { 
 			WebSocketSession session = DBAdministrator.userUsernameMap.get(username);
-			if(session.isOpen()){
-				session.sendMessage(textMmessage);
-				channel.basicAck(tag, false);
+			if(session != null && session.isOpen()){
+				try{
+					session.sendMessage(textMmessage);
+				}
+				catch (Exception e){
+					System.err.println("no se ha posidio enviar el mensaje");
+				}
+				//channel.basicAck(tag, false);
 			}
-		} catch (IOException e) {
+		/*} catch (IOException e) {
 			e.printStackTrace();
-		}
+		}*/
 	}
 	
 }

@@ -7,6 +7,8 @@ const commandWindow = document.getElementById("commands");
 const sendButton = document.getElementById("send");
 const messageInput = document.getElementById("message");
 
+const title = document.getElementById("title");
+
 const sendFileButton = document.getElementById("sendFile");
 
 const sendCommandButton = document.getElementById("sendCommand");
@@ -23,14 +25,6 @@ function connect(event) {
 			type : 'VERIFY'
 		};
 		sendMessage(JSON.stringify(message));
-		messageInput.value = "";
-		document.querySelector('#welcome-page').classList.add('hidden');
-		document.querySelector('#dialogue-page').classList.remove('hidden');
-		
-	    messageWindow.scrollTop = messageWindow.scrollHeight;
-		commandWindow.scrollTop = commandWindow.scrollHeight;
-			
-		
 	}
 	event.preventDefault();
 }
@@ -50,6 +44,19 @@ socket.onmessage = function (event) {
 		
 		if (message.type === 'NOTIFICATION') {
 			addCommandToWindow(message.content);
+		}
+		else if(message.type === 'VERIFY'){
+			if(message.content === 'ok'){
+				messageInput.value = "";
+				document.querySelector('#welcome-page').classList.add('hidden');
+				document.querySelector('#dialogue-page').classList.remove('hidden');
+				
+			    messageWindow.scrollTop = messageWindow.scrollHeight;
+				commandWindow.scrollTop = commandWindow.scrollHeight;
+			}
+			else{
+				title.innerHTML = "Maximo numero de usuario excedido"
+			}
 		}
 		else if (message.type === 'BROADCAST') {
 			addCommandToWindow(message.content);

@@ -70,6 +70,22 @@ public class DBAdministrator {
 		}
 	}
 	
+	public int getNumUsers(){
+		return userRepository.findNumUsers();
+	}
+	
+	public int getNumActiveUsers(){
+		int u = 0;
+		List<String> usernames = userRepository.findUsernames();
+		for(int i = 0; i < usernames.size(); i++){
+			WebSocketSession session = userUsernameMap.get(usernames.get(i));
+			if(session != null && session.isOpen()){
+				u++;
+			}
+		}
+		return u;
+	}
+	
 	public String getActiveRoom(String username){
 		Usuario u = userRepository.findById(username).orElse(null);
 		if(u != null) return u.getActiveroom();
@@ -160,6 +176,17 @@ public class DBAdministrator {
 			}
 		}
 		return u;
+	}
+	
+	public int getNumUsersRoom(String id_room){
+		int numUsers = 0;
+		List<String> usernames = userRepository.findUsernames();
+		for(int i = 0; i < usernames.size(); i++){
+			if(isUserInChat(usernames.get(i), id_room)){
+				numUsers++;
+			}
+		}
+		return numUsers;
 	}
 	
 	/* TABLA MENSAJE */

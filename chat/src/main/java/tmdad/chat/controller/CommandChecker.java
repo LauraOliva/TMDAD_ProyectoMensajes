@@ -3,7 +3,9 @@ package tmdad.chat.controller;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -15,10 +17,22 @@ public class CommandChecker {
 		CLOSEROOM, OPENROOM, INVITEROOM, DELETEROOM, KICKROOM, BROADCAST, GETROOMS, GETUSERSROOM,
 		ADDCENSURE, REMOVECENSURE, GETCENSURE}
 	public static enum typeMessage { CHAT, VERIFY, KICK, COMMAND, NOTIFICATION, BROADCAST, CLEAN}
-	public static enum reply {HELPOK, CHATOK, VERIFYOK, KICKOK, NOTKNOWN, WRONGCOMMAND, NOTADMIN,
+	public static enum reply {HELPOK, CHATOK, VERIFYOK, VERIFYNOK, KICKOK, NOTKNOWN, WRONGCOMMAND, NOTADMIN,
 		ROOMNOTEXISTS, ROOMEXISTS, USERINROOM, CREATEOK, CHATUSERMSG, CHATUSERCREATE, USERNOTEXISTS, JOINOK, 
 		NOTINVITED, LEAVEOK, CLOSEOK, OPENOK, INVITEOK, DELETEOK, KICKROK, USERNOTROOM, NOACTIVEROOM, NOTROOT, 
-		BROADCASTOK, ROOMSOK, USERSROOMOK, ADDCENSUREOK, REMCENSUREOK, GETCENSUREOK}
+		BROADCASTOK, ROOMSOK, USERSROOMOK, ADDCENSUREOK, REMCENSUREOK, GETCENSUREOK, NOTJSON}
+
+	private static final int MAX_NUM_USERS = 100;
+	private final AtomicInteger counter_users = new AtomicInteger(0);
+	private final AtomicInteger counter_active = new AtomicInteger(0);
+	
+	public int getNumUsers() {
+        return counter_users.get();
+    }
+	
+	public int getNumActiveUsers(){
+		return counter_active.get();
+	}
 	
 	public void getMsgRoom(WebSocketSession session, String id_room, DBAdministrator dbAdministrator){
 		
@@ -147,16 +161,48 @@ public class CommandChecker {
 	private ArrayList<String> verify(WebSocketSession session, String username, DBAdministrator dbAdministrator){
 		ArrayList<String> result = new ArrayList<String>();
 		DBAdministrator.userUsernameMap.put(username, session);
+		int numUsers;
+
 		if(dbAdministrator.existsUser(username)){
+			while(true) {
+	            int existingValue = getNumActiveUsers();
+	            int newValue = dbAdministrator.getNumActiveUsers();
+	            if(counter_active.compareAndSet(existingValue, newValue)) {
+	                break;
+	            }
+	        }
 			dbAdministrator.setActiveRoom(username, null);
+			result.add(reply.VERIFYOK.toString());
+	    	result.add(username);
 		}
 		else{
-			boolean isRoot = false;
-			if(username.equals("root")) isRoot = true;
-			dbAdministrator.insertUser(username, "1234", isRoot);
+			while(true) {
+	            int existingValue = getNumUsers();
+	            int newValue = dbAdministrator.getNumUsers()+1;
+	            if(counter_users.compareAndSet(existingValue, newValue)) {
+	            	numUsers = newValue;
+	                break;
+	            }
+	        }
+			if (numUsers > MAX_NUM_USERS){
+				result.add(reply.VERIFYNOK.toString());
+			}
+			else{
+				while(true) {
+		            int existingValue = getNumActiveUsers();
+		            int newValue = dbAdministrator.getNumActiveUsers();
+		            if(counter_active.compareAndSet(existingValue, newValue)) {
+		                break;
+		            }
+		        }
+				boolean isRoot = false;
+				if(username.equals("root")) isRoot = true;
+				dbAdministrator.insertUser(username, "1234", isRoot);
+				result.add(reply.VERIFYOK.toString());
+		    	result.add(username);
+			}
+			
 		}
-		result.add(reply.VERIFYOK.toString());
-    	result.add(username);
 		return result;
 	}
 	
@@ -202,7 +248,14 @@ public class CommandChecker {
 	    ArrayList<String> result = new ArrayList<>();
 	    
 		// Leer el json para saber que tipo de mensaje es
-	    JSONObject payload = new JSONObject(message.getPayload());
+		JSONObject payload = null;
+		try{
+			payload = new JSONObject(message.getPayload());
+		}
+		catch(JSONException e){
+			result.add(reply.NOTJSON.toString());
+			return result;
+		}
 	    String type = payload.getString("type").trim().toUpperCase();
 	    
 		// Obtener sala activa del usuario
