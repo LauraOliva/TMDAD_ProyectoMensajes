@@ -1,0 +1,30 @@
+plugins {
+	id 'org.springframework.boot' version '2.1.4.RELEASE'
+	id 'java'
+}
+
+apply plugin: 'io.spring.dependency-management'
+
+group = 'tmdad.chat'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	compileOnly('org.projectlombok:lombok:1.16.20')
+	annotationProcessor 'org.projectlombok:lombok:1.18.6'
+	compile 'org.json:json:20171018'
+	compile 'org.java-websocket:Java-WebSocket:1.3.0'
+	// https://mvnrepository.com/artifact/org.springframework/spring-websocket
+	compile group: 'org.springframework', name: 'spring-websocket', version: '5.1.6.RELEASE'
+	// https://mvnrepository.com/artifact/org.springframework/spring-messaging
+	compile group: 'org.springframework', name: 'spring-messaging', version: '5.1.6.RELEASE'
+	
+	
+	
+}
