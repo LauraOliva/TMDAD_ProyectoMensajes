@@ -16,16 +16,13 @@ import lombok.Setter;
 @Table(name = "usuario")
 @AllArgsConstructor
 @NoArgsConstructor
+/* Tabla usuario de la base de datos chat */
 public class Usuario{
 	
 	@Id @NotNull
 	@Getter @Setter
 	@Autowired
 	private String username;
-	
-	@NotNull
-	@Getter @Setter
-	private String password;
 	
 	@NotNull
 	@Getter @Setter

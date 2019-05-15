@@ -17,6 +17,7 @@ import lombok.Setter;
 @Table(name = "mensajes")
 @AllArgsConstructor
 @NoArgsConstructor
+/* Tabla mensajes de la base de datos chat */
 public class Mensaje {
 	@Id @NotNull
 	@GeneratedValue(strategy=GenerationType.AUTO)

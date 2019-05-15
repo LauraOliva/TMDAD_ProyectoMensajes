@@ -16,6 +16,7 @@ public class DBFileStorageService {
     @Autowired
     private DBFileRepository dbFileRepository;
 
+    /* Almacena el fichero en la base de datos */
     public DBFile storeFile(MultipartFile file) {
         // Normalize file name
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
@@ -36,7 +37,8 @@ public class DBFileStorageService {
         }
         return null;
     }
-
+    
+    /* Obtiene el fichero con el identificador fileId de la base de datos */
     public DBFile getFile(String fileId) {
     	DBFile file = dbFileRepository.findById(fileId).orElse(null);
     	return file;

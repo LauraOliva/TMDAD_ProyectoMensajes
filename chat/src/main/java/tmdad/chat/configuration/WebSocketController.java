@@ -19,14 +19,14 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import tmdad.chat.bbdd.DBAdministrator;
 import tmdad.chat.controller.CensureAdapter;
-import tmdad.chat.controller.CommandChecker;
-import tmdad.chat.controller.CommandChecker.typeMessage;
+import tmdad.chat.controller.MsgChecker;
+import tmdad.chat.controller.MsgChecker.typeMessage;
 import tmdad.chat.controller.RabbitMQAdapter;
 
 @Component
-public class WebSocketHandler extends TextWebSocketHandler {
+public class WebSocketController extends TextWebSocketHandler {
 
-	CommandChecker msgParser = new CommandChecker();
+	MsgChecker msgParser = new MsgChecker();
 	@Autowired DBAdministrator dbAdministrator;
 	@Autowired RabbitMQAdapter rabbitAdapter;
 	@Autowired CensureAdapter censureAdapter;
@@ -40,19 +40,22 @@ public class WebSocketHandler extends TextWebSocketHandler {
 	public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
 		String sender = DBAdministrator.getUsername(session);
 		if(sender != null){
-			System.out.println(sender);
+			while(true) {
+	            int existingValue = msgParser.getNumActiveUsers();
+	            int newValue = existingValue - 1;
+	            if(MsgChecker.counter_active.compareAndSet(existingValue, newValue)) {
+	                break;
+	            }
+	        }
 			DBAdministrator.userUsernameMap.remove(sender);
 		}
-		System.err.println("Connection closed");
 		super.afterConnectionClosed(session, status);
 	}
 	
 	@Override
 	public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-		System.err.println("Error");
 		super.handleTransportError(session, exception);
 	}
-	
 	
 	@Override
 	protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
@@ -70,7 +73,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
 			payload = new JSONObject(message.getPayload());
 		}
 		catch(JSONException e){
-			System.out.println(message.getPayload());
 			System.out.println(e.getStackTrace());
 		}
 	  	ArrayList<String> status = msgParser.checkMessage(session, message, sender, dbAdministrator);
@@ -81,7 +83,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
 		JSONObject json = new JSONObject();
 		TextMessage textMessage;
 
-		CommandChecker.reply r = CommandChecker.reply.valueOf(status.get(0).toUpperCase());
+		MsgChecker.reply r = MsgChecker.reply.valueOf(status.get(0).toUpperCase());
+		
+		/* Dependiendo de la respuesta de MsgChecker WebSocketController realizara una funcion u otra*/
     	switch(r){
     		case HELPOK:
     			rabbitAdapter.sendMsgQueue(sender, status.get(1), typeMessage.NOTIFICATION.toString());
@@ -95,7 +99,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			msg = status.get(1);
     			censure = censureAdapter.filterMsg(msg, sender);
     			if(Boolean.parseBoolean(censure.get(0))) msg = censure.get(1);
-    			rabbitAdapter.sendMsg(RabbitMQAdapter.ROOT_EXCHANGE, msg, "root", typeMessage.BROADCAST.toString(), dbAdministrator);
+    			rabbitAdapter.sendMsg(RabbitMQAdapter.ROOT_EXCHANGE, msg, "root", typeMessage.NOTIFICATION.toString(), dbAdministrator);
     			break;
     		case WRONGCOMMAND:
     			// Notificar al usuario
@@ -114,12 +118,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			censure = censureAdapter.filterMsg(msg, sender);
     			if(Boolean.parseBoolean(censure.get(0))) msg = censure.get(1);
     			rabbitAdapter.sendMsg(id_room, msg, sender, typeMessage.CHAT.toString(), dbAdministrator);
-    			long startTime = WebSocketHandler.timeMap.get(sender);
+    			long startTime = WebSocketController.timeMap.get(sender);
     			long endTime = System.nanoTime();
     			// get difference of two nanoTime values
     			long timeElapsed = endTime - startTime;
-    			int numUsersRoom = numUserMap.get(sender);//dbAdministrator.getNumUsersRoom(id_room);
-    			System.out.println(numUsersRoom + ", " + timeElapsed/1000000);
+    			int numUsersRoom = numUserMap.get(sender);
     			try(FileWriter fw = new FileWriter("times.txt", true);
     				    BufferedWriter bw = new BufferedWriter(fw);
     				    PrintWriter out = new PrintWriter(bw))
@@ -145,12 +148,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			textMessage = new TextMessage(json.toString());
     			session.sendMessage(textMessage);
     			break;
-    		case KICKOK:
-    			id_room = status.get(1);
-    			rabbitAdapter.sendMsgQueue(sender, "Te han expulsado de la sala " + id_room, typeMessage.NOTIFICATION.toString());
-    			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
-    			rabbitAdapter.unbindQueue(sender, id_room);	
-    	    	break;
     		case CREATEOK:
     			id_room = status.get(1);
     			rabbitAdapter.bindQueue(sender, id_room, dbAdministrator);
@@ -161,7 +158,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			rabbitAdapter.sendMsg(id_room, "se ha unido a la sala", sender, typeMessage.CHAT.toString(), dbAdministrator);
     	    	break;
     		case CHATUSERMSG:
-    			id_room = status.get(1);
     			break;
     		case CHATUSERCREATE:
     			id_room = status.get(1);
@@ -187,7 +183,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			rabbitAdapter.sendMsg(id_room, "ha abandonado la sala", sender, typeMessage.CHAT.toString(), dbAdministrator);
     	    	break;
     		case CLOSEOK:
-    			id_room = status.get(1);
     			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
     			break;
     		case OPENOK:
@@ -210,14 +205,17 @@ public class WebSocketHandler extends TextWebSocketHandler {
     			id_room = status.get(1);
     			rabbitAdapter.sendMsgQueue(sender, "Has eliminado la sala " + id_room, typeMessage.NOTIFICATION.toString());
     			rabbitAdapter.sendMsgQueue(sender, "", typeMessage.CLEAN.toString());
-				rabbitAdapter.sendMsg(id_room, "", sender, typeMessage.KICK.toString(), dbAdministrator);
+    			for (int i = 2; i < status.size(); i++){
+    				id_user = status.get(i);
+    				rabbitAdapter.sendMsgQueue(id_user, "Has sido expulsado de la sala " + id_room, typeMessage.NOTIFICATION.toString());
+        			rabbitAdapter.unbindQueue(id_user, id_room);
+    			}
     			rabbitAdapter.deleteExchange(id_room);
     	    	break;
     		case KICKROK:
 				id_user = status.get(1);
     			id_room = status.get(2);
     			rabbitAdapter.sendMsgQueue(id_user, "Has sido expulsado de la sala " + id_room, typeMessage.NOTIFICATION.toString());
-				rabbitAdapter.sendMsgQueue(id_user, "", typeMessage.CLEAN.toString());
     			rabbitAdapter.unbindQueue(id_user, id_room);
     			rabbitAdapter.sendMsg(id_room, "(Administrador) ha expulsado de la sala " + id_room + " a " + id_user, sender, 
     					typeMessage.CHAT.toString(), dbAdministrator);
@@ -265,8 +263,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
     		case NOTKNOWN:
     			rabbitAdapter.sendMsgQueue(sender, "Comando desconocido", typeMessage.NOTIFICATION.toString());
     			break;
-    		case NOTJSON:
-    			System.out.println("No es json");
     		default:
     			break;
 

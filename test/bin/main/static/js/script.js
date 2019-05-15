@@ -41,7 +41,7 @@ function connect(){
 		}
 		else if(test == '22'){
 			var message = {
-				content : 'OPENROOM room_1',
+				content : 'JOINROOM room_1',
 				type : 'COMMAND'
 			};
 			console.log(message)

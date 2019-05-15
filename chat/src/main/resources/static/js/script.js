@@ -35,47 +35,32 @@ socket.onopen = function (event) {
  
 socket.onmessage = function (event) {
 
-	if (event.data instanceof ArrayBuffer) {
-            addMessageToWindow('Got Image:');
-            addImageToWindow(event.data);
-    } else {
-        
-		var message = JSON.parse(`${event.data}`);
-		
-		if (message.type === 'NOTIFICATION') {
-			addCommandToWindow(message.content);
+
+	var message = JSON.parse(`${event.data}`);
+	
+	if (message.type === 'NOTIFICATION') {
+		addCommandToWindow(message.content);
+	}
+	else if(message.type === 'VERIFY'){
+		if(message.content === 'ok'){
+			messageInput.value = "";
+			document.querySelector('#welcome-page').classList.add('hidden');
+			document.querySelector('#dialogue-page').classList.remove('hidden');
+			
+		    messageWindow.scrollTop = messageWindow.scrollHeight;
+			commandWindow.scrollTop = commandWindow.scrollHeight;
 		}
-		else if(message.type === 'VERIFY'){
-			if(message.content === 'ok'){
-				messageInput.value = "";
-				document.querySelector('#welcome-page').classList.add('hidden');
-				document.querySelector('#dialogue-page').classList.remove('hidden');
-				
-			    messageWindow.scrollTop = messageWindow.scrollHeight;
-				commandWindow.scrollTop = commandWindow.scrollHeight;
-			}
-			else{
-				title.innerHTML = "Maximo numero de usuario excedido"
-			}
-		}
-		else if (message.type === 'BROADCAST') {
-			addCommandToWindow(message.content);
-		}
-		else if(message.type === 'CHAT'){		
-			addMessageToWindow(message.content);
-		}
-		else if(message.type === 'KICK'){
-			var msg = {
-				content : "",
-				type : 'kick'
-			};
-			sendMessage(JSON.stringify(msg));
-			addMessageToWindow("Has sido expulsado de la sala");
-		}
-		else if(message.type === 'CLEAN'){
-			cleanMessageWindow();
+		else{
+			title.innerHTML = "Maximo numero de usuario excedido"
 		}
 	}
+	else if(message.type === 'CHAT'){		
+		addMessageToWindow(message.content);
+	}
+	else if(message.type === 'CLEAN'){
+		cleanMessageWindow();
+	}
+	
 
 };
 
@@ -153,7 +138,7 @@ function uploadFile(file) {
     formData.append("file", file);
 
     var xhr = new XMLHttpRequest();
-    url = 'http://localhost:8000/uploadFile'
+    url = 'http://192.168.1.134:8000/uploadFile'
     xhr.open("POST", url, true);
 
     xhr.onreadystatechange  = function() {
@@ -169,7 +154,7 @@ function uploadFile(file) {
 			};
 			sendMessage(JSON.stringify(message));
         }
-        else{
+        else if(this.readyState === XMLHttpRequest.DONE && this.status != 200) {
         	addCommandToWindow("No se ha podido enviar el fichero")
         }
     }

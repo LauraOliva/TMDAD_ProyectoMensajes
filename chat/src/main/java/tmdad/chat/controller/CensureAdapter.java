@@ -26,6 +26,7 @@ public class CensureAdapter {
 	@Value("${censura.url.filter}")
 	private String URL_FILTER;
 	
+	/* Realiza peticiones get al servicio de censura */
 	public String doGet(String url, String failure) throws IOException{
 		URL obj = new URL(url);
 		System.err.println(url);
@@ -50,7 +51,8 @@ public class CensureAdapter {
 			return failure;
 		}
 	}
-	
+
+	/* Realiza peticiones post al servicio de censura */
 	public String doPost(String url, String params, String failure) throws IOException{
 		URL obj = new URL(url);
 		HttpURLConnection con = (HttpURLConnection) obj.openConnection();
@@ -86,6 +88,7 @@ public class CensureAdapter {
 	
 	}
 	
+	/* Realiza la peticion post al servidor de censura para añadir una nueva palabra */
 	public String addWord(String word){
 		String params = "word=" + word;
 		System.err.println(URL+URL_ADD);
@@ -96,6 +99,7 @@ public class CensureAdapter {
 		}
 	}
 	
+	/* Realiza la peticion post al servidor de censura para eliminar la palabra */ 
 	public String removeWord(String word){
 		String params = "word=" + word;
 		try {
@@ -105,6 +109,7 @@ public class CensureAdapter {
 		}
 	}
 	
+	/* Realiza la peticion post al servidor de censura para censurar el mensaje msg */
 	public ArrayList<String> filterMsg(String msg, String sender){
 
 		String params = "msg=" + msg + "&sender=" + sender;
@@ -124,6 +129,7 @@ public class CensureAdapter {
 		return result;
 	}
 	
+	/* Realiza la peticion get al servidor de censura para obtener las palabras censuradas */
 	public String censuredWords(){
 		try {
 			return doGet(URL+URL_GET, "No se han podido recuperar las palabras censuradas");

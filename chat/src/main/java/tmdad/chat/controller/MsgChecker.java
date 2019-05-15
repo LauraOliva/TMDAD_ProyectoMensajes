@@ -5,35 +5,42 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import tmdad.chat.bbdd.DBAdministrator;
 
-public class CommandChecker {
+public class MsgChecker {
+	/* Posibles comandos */
 	public static enum commands { HELP, CREATEROOM, CHATUSER, JOINROOM, LEAVEROOM, 
 		CLOSEROOM, OPENROOM, INVITEROOM, DELETEROOM, KICKROOM, BROADCAST, GETROOMS, GETUSERSROOM,
 		ADDCENSURE, REMOVECENSURE, GETCENSURE}
-	public static enum typeMessage { CHAT, VERIFY, KICK, COMMAND, NOTIFICATION, BROADCAST, CLEAN}
-	public static enum reply {HELPOK, CHATOK, VERIFYOK, VERIFYNOK, KICKOK, NOTKNOWN, WRONGCOMMAND, NOTADMIN,
+	/* Tipos de mensajes */
+	public static enum typeMessage { CHAT, VERIFY, COMMAND, NOTIFICATION, CLEAN}
+	/* Posibles respuestas */
+	public static enum reply {HELPOK, CHATOK, VERIFYOK, VERIFYNOK, NOTKNOWN, WRONGCOMMAND, NOTADMIN,
 		ROOMNOTEXISTS, ROOMEXISTS, USERINROOM, CREATEOK, CHATUSERMSG, CHATUSERCREATE, USERNOTEXISTS, JOINOK, 
 		NOTINVITED, LEAVEOK, CLOSEOK, OPENOK, INVITEOK, DELETEOK, KICKROK, USERNOTROOM, NOACTIVEROOM, NOTROOT, 
-		BROADCASTOK, ROOMSOK, USERSROOMOK, ADDCENSUREOK, REMCENSUREOK, GETCENSUREOK, NOTJSON}
+		BROADCASTOK, ROOMSOK, USERSROOMOK, ADDCENSUREOK, REMCENSUREOK, GETCENSUREOK}
 
 	private static final int MAX_NUM_USERS = 100;
+	/* Numero de usuarios del sistema */
 	private final AtomicInteger counter_users = new AtomicInteger(0);
-	private final AtomicInteger counter_active = new AtomicInteger(0);
+	/* Número de usuarios activos */
+	public static final AtomicInteger counter_active = new AtomicInteger(0);
 	
+	/* Devuelve el número de usuarios registrados */
 	public int getNumUsers() {
         return counter_users.get();
     }
 	
+	/*Devuelve el número de usuarios activos */
 	public int getNumActiveUsers(){
 		return counter_active.get();
 	}
 	
+	/* Envía a la sesión sesion los mensajes de la sala id_room almacenados en la base de datos */
 	public void getMsgRoom(WebSocketSession session, String id_room, DBAdministrator dbAdministrator){
 		
 		boolean multiple = dbAdministrator.isMultiple(id_room);
@@ -60,6 +67,7 @@ public class CommandChecker {
 		
 	}
 	
+	/* Devuelve las salas a las que pertenece el usuario sender */
 	private String getRooms(String sender, DBAdministrator dbAdministrator){
 		String rooms = "";
 		List<String> r = dbAdministrator.getRooms(sender);
@@ -73,6 +81,7 @@ public class CommandChecker {
 		return rooms;
 	}
 	
+	/* Devuelve los usuarios de la sala id_room */
 	private String getUsersRoom(String id_room, String sender, DBAdministrator dbAdministrator){
 		String users = "";
 		
@@ -88,6 +97,7 @@ public class CommandChecker {
 		return users;
 	}
 	
+	/* Devuelve un string que contiene la ayuda necesaria para ejecutar los diferentes comandos */
 	private String getHelp(){
 		String help = "";
 		for (commands cmd : commands.values()) { 
@@ -114,6 +124,7 @@ public class CommandChecker {
 		return help;
 	}
 	
+	/* Comprueba si se puede crear una nueva sala. Si es posible crea la sala */
 	private ArrayList<String> checkCreate(String id, DBAdministrator dbAdministrator, String sender){
 		ArrayList<String> result = new ArrayList<String>();
 
@@ -128,6 +139,7 @@ public class CommandChecker {
 		return result;
 	}
 	
+	/* Devuelve true si y solo si el comando tiene el número de parámetros correcto */
 	private boolean checkLengthCommand(String[] command, commands cmd){
 		return (command.length != 2 && (!cmd.equals(commands.KICKROOM) && !cmd.equals(commands.INVITEROOM) 
     			&& !cmd.equals(commands.CLOSEROOM) && !cmd.equals(commands.HELP) && !cmd.equals(commands.BROADCAST) 
@@ -138,26 +150,40 @@ public class CommandChecker {
     			|| (command.length < 2 && cmd.equals(commands.BROADCAST))));
 	}
 	
+	/* Devuelve true si y solo si el comando cmd solo puede ser ejecutado por el administrador de la sala y lo esta
+	 * intentando ejecutar un usuario que no es el administrador de la sala*/
 	private boolean checkAdmin(String[] command, commands cmd, String sender, DBAdministrator dbAdministrator){
 		return ((cmd.equals(commands.INVITEROOM) || cmd.equals(commands.DELETEROOM) || cmd.equals(commands.KICKROOM))
     			&& !dbAdministrator.isAdmin(command[1], sender));
 	}
 	
+	/* Devuelve true si y solo si el comando command solo puede ser ejecutado sobre una sala existente y la 
+	 * sala no existe
+	 */
 	private boolean checkRoom(String[] command, commands cmd, DBAdministrator dbAdministrator){
 		return (((cmd.equals(commands.DELETEROOM) || cmd.equals(commands.KICKROOM)|| cmd.equals(commands.LEAVEROOM)
 	    		|| cmd.equals(commands.JOINROOM) || cmd.equals(commands.INVITEROOM)))	
     			&& !dbAdministrator.existsChat(command[1], true));
 	}
 	
+	/* Debuelbe true si y solo si el un usuario se intenta unir a una sala en la que ya está o si se intenta invitar a 
+	 * un usuario que ya esta en la sala 
+	 */
 	private boolean checkInvitation(commands cmd, DBAdministrator dbAdministrator, String sender, String id_room){
 		return ((cmd.equals(commands.JOINROOM) || cmd.equals(commands.INVITEROOM)) && dbAdministrator.isUserInChat(sender, id_room));
 	}
 	
+	/* Devuelve true si y solo si el comando cmd sólo puede ser ejecutado por el administrador del sistema
+	 * y lo está intentando ejecutar un usuario que no es el administrador
+	 */
 	private boolean checkRoot(commands cmd, DBAdministrator dbAdministrator, String sender){
 		return ((cmd.equals(commands.BROADCAST) || cmd.equals(commands.ADDCENSURE) || cmd.equals(commands.REMOVECENSURE)
 				|| cmd.equals(commands.GETCENSURE)) && !dbAdministrator.isRoot(sender));
 	}
 	
+	/* Comprueba si un usuario existe o si un usuario nuevo puede ser creado (el numero de usuarios registrados no 
+	 * supera 100.
+	 */
 	private ArrayList<String> verify(WebSocketSession session, String username, DBAdministrator dbAdministrator){
 		ArrayList<String> result = new ArrayList<String>();
 		DBAdministrator.userUsernameMap.put(username, session);
@@ -197,7 +223,7 @@ public class CommandChecker {
 		        }
 				boolean isRoot = false;
 				if(username.equals("root")) isRoot = true;
-				dbAdministrator.insertUser(username, "1234", isRoot);
+				dbAdministrator.insertUser(username, isRoot);
 				result.add(reply.VERIFYOK.toString());
 		    	result.add(username);
 			}
@@ -206,6 +232,9 @@ public class CommandChecker {
 		return result;
 	}
 	
+	/* Comprueba si dos usuarios ya tienen una sala privada creada. Si si, se recuperan los mensajes.
+	 * Si no, se crea una nueva sala.
+	 */
 	private ArrayList<String> checkChatUser(WebSocketSession session, String user2, String sender, DBAdministrator dbAdministrator){
 		ArrayList<String> result = new ArrayList<String>();
 		String id_active_room = "";
@@ -243,26 +272,25 @@ public class CommandChecker {
 		return result;
 	}
 	
+	/* Comprueba que el mensaje es correcto. Las comprobaciones dependen del tipo de mensaje.
+	 * Devuelve una lista de strings con los datos necesarios para el procesado correcto del mensaje.
+	 */
 	public ArrayList<String> checkMessage(WebSocketSession session, TextMessage message, 
 				String sender, DBAdministrator dbAdministrator) throws IOException {
 	    ArrayList<String> result = new ArrayList<>();
 	    
 		// Leer el json para saber que tipo de mensaje es
 		JSONObject payload = null;
-		try{
-			payload = new JSONObject(message.getPayload());
-		}
-		catch(JSONException e){
-			result.add(reply.NOTJSON.toString());
-			return result;
-		}
+		payload = new JSONObject(message.getPayload());
+		
 	    String type = payload.getString("type").trim().toUpperCase();
+	    String content = payload.getString("content").trim();
 	    
 		// Obtener sala activa del usuario
 	    String id_active_room = null;
 	    if(sender != null) id_active_room = dbAdministrator.getActiveRoom(sender);
 
-	    if((type.equals(typeMessage.CHAT.toString()) || type.equals(typeMessage.KICK.toString())) 
+	    if((type.equals(typeMessage.CHAT.toString())) 
 	    	&& id_active_room == null){
 	    		result.add(reply.NOACTIVEROOM.toString());
 	    		return result;
@@ -276,13 +304,8 @@ public class CommandChecker {
 	    else if(type.equals(typeMessage.VERIFY.toString())){
 	    	result = verify(session, payload.getString("content").trim(), dbAdministrator);
 	    }
-	    else if(type.equals(typeMessage.KICK.toString())){
-	    	dbAdministrator.setActiveRoom(sender, null);
-	    	result.add(reply.KICKOK.toString());
-    		result.add(id_active_room);	    	
-	    }
 	    else if(type.equals(typeMessage.COMMAND.toString())){
-	    	String content = payload.getString("content").trim();
+	    	
 	    	/*
 	    	 * Estructura de los comandos
 	    	 * COMMAND parameter [, parameter]
@@ -376,7 +399,9 @@ public class CommandChecker {
 		    		break;
 	    		case LEAVEROOM:
 	    			id_room = command[1];
-	    			dbAdministrator.setActiveRoom(sender, null);
+	    			if(id_room.equals(id_active_room)){
+	    				dbAdministrator.setActiveRoom(sender, null);
+	    			}
         	    	result.add(reply.LEAVEOK.toString());
 	    			result.add(id_room);
 		    		break;
@@ -386,7 +411,6 @@ public class CommandChecker {
     					dbAdministrator.setActiveRoom(sender, null);
 	    	    	}
     				result.add(reply.CLOSEOK.toString());
-    				result.add(id_active_room);
 	    			break;
 	    		case OPENROOM:
 	    			id_room = command[1];
@@ -411,10 +435,13 @@ public class CommandChecker {
 		    		String id = command[1];
     				//dbAdministrator.removeActiveRoom(sender);
 		    		//dbAdministrator.setActiveRoom(sender, null);
+		    		ArrayList<String> users_room= dbAdministrator.getUsersRoom(id);
+		    		
         	    	dbAdministrator.removeChat(id);
 		    		dbAdministrator.removeMsgRoom(id);
         	    	result.add(reply.DELETEOK.toString());
     				result.add(id);
+    				result.addAll(users_room);
 		    		
 		    		break;
 	    		case KICKROOM:
@@ -422,7 +449,8 @@ public class CommandChecker {
     				id_user = command[2];
     				if(dbAdministrator.isUserInChat(sender, id_room)){
     	    			//dbAdministrator.removeActiveRoom(id_user);
-    					dbAdministrator.setActiveRoom(id_user, null);
+    					if(dbAdministrator.getActiveRoom(id_user).equals(id_room))
+    						dbAdministrator.setActiveRoom(id_user, null);
     	    			result.add(reply.KICKROK.toString());
     				}
     				else result.add(reply.USERNOTROOM.toString());

@@ -16,6 +16,7 @@ import lombok.Setter;
 @Table(name = "mensajes")
 @AllArgsConstructor
 @NoArgsConstructor
+/* Tabla de mensajes de la base de datos de censura */
 public class MensajeCensurado {
 	
 	@Id @NotNull

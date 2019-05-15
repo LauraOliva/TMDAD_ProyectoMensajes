@@ -17,8 +17,7 @@ import com.rabbitmq.client.DeliverCallback;
 import com.rabbitmq.client.MessageProperties;
 
 import tmdad.chat.bbdd.DBAdministrator;
-import tmdad.chat.configuration.WebSocketHandler;
-import tmdad.chat.controller.CommandChecker.typeMessage;
+import tmdad.chat.controller.MsgChecker.typeMessage;
 
 
 @Component
@@ -43,21 +42,18 @@ public class RabbitMQAdapter {
 		try {
 			connection = factory.newConnection();
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		} catch (TimeoutException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		// Con un solo canal
 		try {
 			channel = connection.createChannel();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
+	/* Une la cola queueName a la centralita exchangeName */ 
 	public void bindQueue(String queueName, String exchangeName, DBAdministrator dbAdministrator){
 
 		try {
@@ -75,18 +71,17 @@ public class RabbitMQAdapter {
 			// la ponemos vacía, porque se va a ignorar)	
 			channel.queueBind(queueName, exchangeName, "");
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		
-		DeliverCallback deliverCallback = (consumerTag, delivery) -> {			
-			
+		DeliverCallback deliverCallback = (consumerTag, delivery) -> {		
 			// Enviar mensaje a la sesion del usuario -> el username lo obtenermos por el nombre de la cola
 			JSONObject payload = new JSONObject(new String(delivery.getBody()));
 	        String message = payload.getString("msg");
 	        String type = payload.getString("type");
 	        String sender = payload.getString("sender");
-	        String dst = payload.getString("dst");
+	        String dst = payload.getString("dst");	
+			System.err.println("mensaje recibido " + dst);
 	        // Comrpobar si el mensaje va dirigido a su chat activo
 			String id_room = dbAdministrator.getActiveRoom(queueName);
 			if(!dst.equals(id_room) && type.equals(typeMessage.CHAT.toString())){
@@ -106,9 +101,14 @@ public class RabbitMQAdapter {
 				}
 				System.err.println(queueName);
 				System.err.println(dst);
-				if(dst != null){
-					channel.basicPublish("", dst, MessageProperties.PERSISTENT_TEXT_PLAIN, delivery.getBody());
+				System.err.println("cancelar");
+				if(queueName != null){
+					//sendMsgQueue(dst, message, type);
+					channel.basicPublish("", queueName, MessageProperties.PERSISTENT_TEXT_PLAIN, delivery.getBody());
+					System.out.println(delivery.getBody());
+					System.err.println("cancelado");
 				}
+
 			}
 			else{
 		        sendMsgSession(message, queueName, type, sender, delivery.getEnvelope().getDeliveryTag());
@@ -118,23 +118,26 @@ public class RabbitMQAdapter {
 	    try {
 			channel.basicConsume(queueName, true, deliverCallback, consumerTag -> { });
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
+	/* Elimia la cola queueName */
 	public void deleteQueue(String queueName) throws IOException{
 		channel.queueDelete(queueName);
 	}
 	
+	/* Elimina la centralita exchangeName */
 	public void deleteExchange(String exchangeName) throws IOException{
 		channel.exchangeDelete(exchangeName);
 	}
 
+	/* Elimina la unión entre la cola queueName y la centralita exchangeName */
 	public void unbindQueue(String queueName, String exchangeName) throws IOException{
 		channel.queueUnbind(queueName, exchangeName, "");
 	}
 	
+	/* Envia un mensaje cuyo contenido sea msg a la centralita exchangeName */
 	public void sendMsg(String exchangeName, String msg, String sender, String type, DBAdministrator dbAdministrator) throws IOException{
 		JSONObject json = new JSONObject();
 		json.put("msg", msg);
@@ -156,8 +159,7 @@ public class RabbitMQAdapter {
 		dbAdministrator.insertMsg(sender, exchangeName, (new Date()).getTime(), msg, type);		
 	}
 	
-	// Se utiliza para enviar notificaciones al usuario
-	// Las notificaciones no se almacenan en la BD
+	/* Envía un mensaje cuyo contenido sea msg a la cola queueName */
 	public void sendMsgQueue(String queueName, String msg, String type) throws IOException{
 		// Publicamos el mensaje en la centralita EXCHANGE_NAME declarada
 		// antes. La clave de enrutado la dejamos vacÃ­a (la va a ignorar), 
@@ -175,6 +177,7 @@ public class RabbitMQAdapter {
 
 	}
 	
+	/* Envía un mensaje a la sesión session cuyo contenido sea msg */
 	public void sendMsgSession(String msg, String username, String type, String sender, long tag){
 		Date date= new Date();
 		String timestamp = new SimpleDateFormat("HH:mm").format(date);	

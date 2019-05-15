@@ -16,6 +16,7 @@ import lombok.Setter;
 @Table(name = "palabras")
 @AllArgsConstructor
 @NoArgsConstructor
+/* Tabla palabras de la base de datos de censura */
 public class PalabraCensurada{
 	
 	@Id @NotNull

@@ -15,6 +15,7 @@ import lombok.Setter;
 @Entity
 @Table(name = "chatroom")
 @NoArgsConstructor
+/* Tabla chatroom de la base de datos chat */
 public class Chatroom {
 	
 	@Id 

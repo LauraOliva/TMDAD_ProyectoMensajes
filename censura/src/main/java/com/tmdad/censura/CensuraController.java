@@ -22,6 +22,7 @@ public class CensuraController {
 	@Autowired public PalabrasRepository wordRepository;
 	@Autowired public MensajesRepository msgRepository;
 	
+	/* Filtra el mensaje msg enviado por el usuario sender */
 	@PostMapping("/censureFilter")
     public String filter(@RequestParam("msg") String msg, @RequestParam("sender") String sender) {
     	
@@ -46,6 +47,7 @@ public class CensuraController {
         return msg;
     }
 	
+	/* Añade la palabra word a la base de datos de censura */
 	@PostMapping("/addCensure")
     public String addCensure(@RequestParam("word") String word) {
 		List<PalabraCensurada> w = wordRepository.findByWord(word);
@@ -60,6 +62,7 @@ public class CensuraController {
         
     }
 	
+	/* Elimina la palabra word de la base de datos de censura */
 	@PostMapping("/removeCensure")
     public String removeCensure(@RequestParam("word") String word) {
     	
@@ -72,6 +75,7 @@ public class CensuraController {
         
     }
 
+	/* Obtiene todas las palabras de la base de datos de censura */
     @GetMapping("/censureWords")
     public String getWords() {
     	ArrayList<String> words = new ArrayList<>();
